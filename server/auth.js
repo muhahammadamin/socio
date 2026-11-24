@@ -36,7 +36,7 @@ export function makeToken(uid) {
   const body = b64(JSON.stringify({ uid, exp: Date.now() + TTL }));
   return `${body}.${sign(body)}`;
 }
-export function readToken(token) {
+export async function readToken(token) {
   if (typeof token !== 'string') return null;
   const [body, sig] = token.split('.');
   if (!body || !sig) return null;
@@ -45,7 +45,7 @@ export function readToken(token) {
   try {
     const p = JSON.parse(Buffer.from(body, 'base64url').toString());
     if (!p.exp || p.exp < Date.now()) return null;
-    return one('SELECT * FROM users WHERE id = ?', p.uid) || null;
+    return (await one('SELECT * FROM users WHERE id = ?', p.uid)) || null;
   } catch { return null; }
 }
 
@@ -81,10 +81,10 @@ export async function verifyGoogle(credential) {
   return ok ? { sub: String(p.sub), email: String(p.email || ''), name: String(p.name || '').slice(0, 80) } : null;
 }
 
-export function authenticate(req, res, next) {
+export async function authenticate(req, res, next) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : req.query.token;
-  req.user = readToken(token);
+  req.user = await readToken(token);
   if (!req.user) return res.status(401).json({ error: 'Нужно войти в аккаунт' });
   next();
 }

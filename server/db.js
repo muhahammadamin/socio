@@ -1,12 +1,45 @@
-import { DatabaseSync } from 'node:sqlite';
+import { createClient } from '@libsql/client';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import fs from 'node:fs';
 import path from 'node:path';
 
 export const DATA_DIR = path.resolve(process.env.DATA_DIR || 'data');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-export const db = new DatabaseSync(process.env.DB_FILE || path.join(DATA_DIR, 'socio.db'));
-db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+// В продакшене база живёт в Turso (облачная SQLite) и не стирается при перезапусках.
+// Без TURSO_DATABASE_URL используется локальный файл — для разработки.
+const REMOTE = process.env.TURSO_DATABASE_URL;
+const LOCAL_FILE = process.env.DB_FILE || path.join(DATA_DIR, 'socio.db');
+export const db = createClient(REMOTE
+  ? { url: REMOTE, authToken: process.env.TURSO_AUTH_TOKEN }
+  : { url: 'file:' + LOCAL_FILE.replaceAll('\\', '/') });
+console.log(`[socio] база данных: ${REMOTE ? 'Turso (' + new URL(REMOTE).host + ')' : LOCAL_FILE}`);
+
+// Внутри tx() запросы идут в транзакцию, вне её — напрямую в базу.
+const txStore = new AsyncLocalStorage();
+const toObj = (rs) => rs.rows.map((r) => Object.fromEntries(rs.columns.map((c, i) => [c, r[i]])));
+// NaN (например, Number('abc') из адреса) libSQL не принимает — превращаем в NULL, запрос просто ничего не найдёт.
+const exec = (sql, args) => (txStore.getStore() || db).execute({ sql, args: args.map((a) => (Number.isNaN(a) ? null : a)) });
+
+export const one = async (sql, ...p) => toObj(await exec(sql, p))[0];
+export const all = async (sql, ...p) => toObj(await exec(sql, p));
+export async function run(sql, ...p) {
+  const r = await exec(sql, p);
+  return { changes: r.rowsAffected, lastInsertRowid: r.lastInsertRowid === undefined ? undefined : Number(r.lastInsertRowid) };
+}
+
+export async function tx(fn) {
+  if (txStore.getStore()) return fn(); // уже внутри транзакции
+  const t = await db.transaction('write');
+  try {
+    const r = await txStore.run(t, fn);
+    await t.commit();
+    return r;
+  } catch (e) {
+    try { await t.rollback(); } catch { /* соединение могло закрыться */ }
+    throw e;
+  } finally { t.close(); }
+}
 
 const usersTable = (name) => `
 CREATE TABLE IF NOT EXISTS ${name} (
@@ -33,7 +66,8 @@ CREATE TABLE IF NOT EXISTS ${name} (
   created_at  INTEGER NOT NULL
 );`;
 
-db.exec(`${usersTable('users')}
+if (!REMOTE) await db.execute('PRAGMA journal_mode = WAL');
+await db.executeMultiple(`${usersTable('users')}
 CREATE TABLE IF NOT EXISTS categories (
   id       INTEGER PRIMARY KEY,
   name     TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -146,38 +180,24 @@ CREATE TABLE IF NOT EXISTS shorts (
 `);
 
 /* ---------- миграции для уже существующих баз ---------- */
-const hasCol = (t, c) => db.prepare(`PRAGMA table_info(${t})`).all().some((x) => x.name === c);
-const addCol = (t, c, def) => { if (!hasCol(t, c)) db.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${def}`); };
+const hasCol = async (t, c) => (await all(`PRAGMA table_info(${t})`)).some((x) => x.name === c);
+const addCol = async (t, c, def) => { if (!(await hasCol(t, c))) await db.execute(`ALTER TABLE ${t} ADD COLUMN ${c} ${def}`); };
 
-addCol('users', 'skills', `TEXT NOT NULL DEFAULT '[]'`);
-addCol('volunteers', 'skills', `TEXT NOT NULL DEFAULT '[]'`);
-addCol('categories', 'descr', `TEXT NOT NULL DEFAULT ''`);
-addCol('categories', 'examples', `TEXT NOT NULL DEFAULT ''`);
+await addCol('users', 'skills', `TEXT NOT NULL DEFAULT '[]'`);
+await addCol('volunteers', 'skills', `TEXT NOT NULL DEFAULT '[]'`);
+await addCol('categories', 'descr', `TEXT NOT NULL DEFAULT ''`);
+await addCol('categories', 'examples', `TEXT NOT NULL DEFAULT ''`);
 
 // Роль «студент» требует нового CHECK в users — SQLite умеет это только через пересоздание таблицы.
-if (!db.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`).get().sql.includes(`'student'`)) {
+if (!(await one(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`)).sql.includes(`'student'`)) {
   const cols = ['id', 'role', 'name', 'phone', 'phone_key', 'pass', 'dist', 'avail', 'rating_sum', 'rating_cnt', 'base_done', 'base_helped', 'balance', 'skills', 'created_at'].join(',');
-  db.exec('PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON;');
-  try {
-    db.exec('BEGIN');
-    db.exec(usersTable('users_new'));
-    db.exec(`INSERT INTO users_new (${cols}) SELECT ${cols} FROM users; DROP TABLE users; ALTER TABLE users_new RENAME TO users;`);
-    db.exec('COMMIT');
-  } catch (e) { db.exec('ROLLBACK'); throw e; }
-  finally { db.exec('PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;'); }
+  await db.executeMultiple(`PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON; BEGIN;
+    ${usersTable('users_new')}
+    INSERT INTO users_new (${cols}) SELECT ${cols} FROM users; DROP TABLE users; ALTER TABLE users_new RENAME TO users;
+    COMMIT; PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;`);
 }
-addCol('users', 'google_sub', 'TEXT');
-addCol('users', 'email', `TEXT NOT NULL DEFAULT ''`);
-addCol('users', 'verified', 'INTEGER NOT NULL DEFAULT 1');
-addCol('users', 'needs', `TEXT NOT NULL DEFAULT '[]'`); // id категорий, с которыми человеку нужна помощь
-db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google ON users(google_sub) WHERE google_sub IS NOT NULL');
-
-export const one =(sql, ...p) => db.prepare(sql).get(...p);
-export const all = (sql, ...p) => db.prepare(sql).all(...p);
-export const run = (sql, ...p) => db.prepare(sql).run(...p);
-
-export function tx(fn) {
-  db.exec('BEGIN');
-  try { const r = fn(); db.exec('COMMIT'); return r; }
-  catch (e) { db.exec('ROLLBACK'); throw e; }
-}
+await addCol('users', 'google_sub', 'TEXT');
+await addCol('users', 'email', `TEXT NOT NULL DEFAULT ''`);
+await addCol('users', 'verified', 'INTEGER NOT NULL DEFAULT 1');
+await addCol('users', 'needs', `TEXT NOT NULL DEFAULT '[]'`); // id категорий, с которыми человеку нужна помощь
+await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google ON users(google_sub) WHERE google_sub IS NOT NULL');

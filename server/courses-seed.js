@@ -103,10 +103,10 @@ const SHORTS = [
   ['Зачем мошенники звонят и молчат', '3iMNBRZPRsM', 'Мошенники'],
 ];
 
-export function ensureCourses() {
-  if (!one('SELECT id FROM courses LIMIT 1'))
+export async function ensureCourses() {
+  if (!(await one('SELECT id FROM courses LIMIT 1')))
     for (const c of COURSES)
-      run('INSERT INTO courses (title,descr,icon,color,items,created_at) VALUES (?,?,?,?,?,?)', c.title, c.descr, c.icon, c.color, JSON.stringify(c.items), Date.now());
-  if (!one('SELECT id FROM shorts LIMIT 1'))
-    SHORTS.forEach(([title, video, topic], i) => run('INSERT INTO shorts (title,video,topic,created_at) VALUES (?,?,?,?)', title, video, topic, Date.now() - i));
+      await run('INSERT INTO courses (title,descr,icon,color,items,created_at) VALUES (?,?,?,?,?,?)', c.title, c.descr, c.icon, c.color, JSON.stringify(c.items), Date.now());
+  if (!(await one('SELECT id FROM shorts LIMIT 1')))
+    for (const [i, [title, video, topic]] of SHORTS.entries()) await run('INSERT INTO shorts (title,video,topic,created_at) VALUES (?,?,?,?)', title, video, topic, Date.now() - i);
 }

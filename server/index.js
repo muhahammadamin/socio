@@ -11,7 +11,7 @@ const DEV = process.argv.includes('--dev') || process.env.NODE_ENV === 'developm
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-initData();
+await initData();
 
 const app = express();
 const server = http.createServer(app);

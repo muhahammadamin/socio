@@ -1,7 +1,8 @@
 # Деплой на Render в один клик: New → Blueprint → выбрать репозиторий.
-# Бесплатный тариф: диска нет, база SQLite живёт в контейнере и
-# СТИРАЕТСЯ при каждом перезапуске/обновлении (и после засыпания сервиса).
-# Для постоянной работы: plan: starter + блок disk (см. ниже).
+# База данных — Turso (облачная SQLite): данные сохраняются при перезапусках,
+# обновлениях и засыпании сервиса. После создания сервиса вставьте в панели
+# Render (Environment) TURSO_DATABASE_URL и TURSO_AUTH_TOKEN из turso.tech.
+# Без них база будет временной — внутри контейнера.
 services:
   - type: web
     name: socio
@@ -18,8 +19,8 @@ services:
       # Вход через Google: вставьте Client ID в панели Render (Environment) после создания сервиса
       - key: GOOGLE_CLIENT_ID
         sync: false
-    # Постоянное хранение данных (только на платном тарифе):
-    # disk:
-    #   name: socio-data
-    #   mountPath: /data
-    #   sizeGB: 1
+      # Turso: адрес базы (libsql://…) и токен доступа
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
