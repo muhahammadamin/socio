@@ -1,0 +1,182 @@
+import { db, run, one, tx } from './db.js';
+import { hashPassword } from './auth.js';
+import { ensureCourses } from './courses-seed.js';
+import { ensureRewards } from './coins.js';
+import { DISTRICTS, STATUSES, phoneKey } from '../shared/constants.js';
+
+const MIN = 6e4, HOUR = 36e5, DAY = 864e5;
+const ADDR = ['ул. Бунёдкор, 12', 'ул. Фархад, 45', 'ул. Навои, 8', 'массив Хадра, 3', 'ул. Амира Темура, 21', 'ул. Мукими, 17', 'ул. Катартал, 6', 'ул. Кичик Халка Йули, 30'];
+
+export const DEMO_PASSWORD = 'demo123';
+
+function addUser(u, passHash) {
+  return Number(run(
+    `INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,school,coins,avail,rating_sum,rating_cnt,base_done,base_helped,balance,created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    u.role, u.name, u.phone, phoneKey(u.phone), passHash, u.dist || '', JSON.stringify(u.skills || []), u.school || '', u.coins || 0, u.avail === false ? 0 : 1,
+    (u.rating || 0) * (u.rcnt || 0), u.rcnt || 0, u.base || 0, u.bp || 0, u.balance || 0, Date.now() - 60 * DAY,
+  ).lastInsertRowid);
+}
+
+/** Создаёт администратора из переменных окружения, если админов ещё нет. */
+export function ensureAdmin() {
+  if (one(`SELECT id FROM users WHERE role='admin' LIMIT 1`)) return;
+  const phone = process.env.ADMIN_PHONE || '+998 90 000-00-00';
+  const pass = process.env.ADMIN_PASSWORD || 'admin123';
+  addUser({ role: 'admin', name: 'Администратор', phone }, hashPassword(pass));
+  console.log(`[socio] создан администратор ${phone}${process.env.ADMIN_PASSWORD ? '' : ' / admin123 — смените ADMIN_PASSWORD в продакшене'}`);
+}
+
+// Стандартные категории с объяснением для людей, которые выбирают, с чем им нужна помощь.
+const CATEGORIES = [
+  ['Пожилые люди', '#3b5bf0', 'user', 'Поддержка пожилых людей, которым трудно справляться с делами самостоятельно или которые живут одни.', [
+    'Сопроводить на прогулку, в поликлинику или в банк',
+    'Помочь с уборкой и мелкими делами по дому',
+    'Принести воду, вынести мусор',
+    'Навестить и просто поговорить',
+  ]],
+  ['Медицина', '#f26b4f', 'pill', 'Доставка лекарств и сопровождение к врачу. Помощники не ставят уколы и не проводят медицинских процедур — в экстренной ситуации звоните 103.', [
+    'Купить и привезти лекарства по рецепту',
+    'Сопроводить к врачу или на анализы',
+    'Помочь записаться на приём',
+    'Забрать результаты анализов или справку',
+  ]],
+  ['Покупки', '#2fae62', 'bag', 'Продукты и товары первой необходимости для тех, кто не может выйти из дома или донести тяжёлое. Покупки оплачивает сам человек — помощник отдаёт чек и сдачу.', [
+    'Купить продукты по списку',
+    'Принести воду и тяжёлые покупки',
+    'Купить бытовую химию и средства гигиены',
+    'Забрать заказ из магазина или пункта выдачи',
+  ]],
+  ['Семьи и дети', '#7c5ce6', 'users', 'Помощь многодетным семьям, родителям-одиночкам и семьям с детьми с особыми потребностями.', [
+    'Присмотреть за детьми несколько часов',
+    'Помочь ребёнку с уроками',
+    'Проводить ребёнка в школу или на кружок',
+    'Помочь собрать и передать детские вещи',
+  ]],
+  ['Другое', '#f5a623', 'heart', 'Всё, что не подошло в другие категории: техника, документы, бытовые и юридические вопросы. Опишите ситуацию — координатор подберёт помощника с нужными навыками.', [
+    'Настроить телефон, интернет или видеосвязь с родными',
+    'Помочь заполнить заявление или разобраться с документами',
+    'Проконсультироваться с волонтёром-юристом',
+    'Мелкий ремонт по дому',
+  ]],
+];
+
+export function ensureCategories() {
+  if (!one('SELECT id FROM categories LIMIT 1'))
+    for (const [n, c, i, d, ex] of CATEGORIES)
+      run('INSERT INTO categories (name,color,icon,descr,examples) VALUES (?,?,?,?,?)', n, c, i, d, ex.join('\n'));
+  // уже существующим стандартным категориям без описания — добавить его
+  for (const [n, , , d, ex] of CATEGORIES)
+    run(`UPDATE categories SET descr=?, examples=? WHERE name=? AND descr=''`, d, ex.join('\n'), n);
+}
+
+/** Полностью пересоздаёт демо-данные. */
+export function seedDemo() {
+  const now = Date.now();
+  const demoHash = hashPassword(DEMO_PASSWORD);
+  tx(() => {
+    for (const t of ['notifications', 'complaints', 'request_log', 'requests', 'volunteers', 'categories', 'coin_log', 'learn_progress', 'users']) run(`DELETE FROM ${t}`);
+    run('UPDATE reward_codes SET user_id=NULL, issued_at=NULL');
+  });
+  ensureAdmin();
+  ensureCategories();
+  tx(() => {
+    const cat = Object.fromEntries(db.prepare('SELECT id,name FROM categories').all().map((c) => [c.name, c.id]));
+    const U = {}, H = {};
+    [['u1', 'Ирина Каримова', 'Чиланзар', '+998 90 111-22-01', 24], ['u2', 'Нодира Саидова', 'Чиланзар', '+998 90 111-22-02'],
+     ['u3', 'Азиз Рахимов', 'Яшнабад', '+998 90 111-22-03'], ['u4', 'Мадина Юсупова', 'Мирзо-Улугбек', '+998 90 111-22-04'],
+     ['u5', 'Шухрат Ахмедов', 'Алмазар', '+998 90 111-22-05']]
+      .forEach(([k, name, dist, phone, balance]) => { U[k] = addUser({ role: 'user', name, dist, phone, balance }, demoHash); });
+    [['h1', 'Алексей Петров', '+998 91 200-00-01', 'Чиланзар', 16, 85, 4.9, true, ['elderly', 'shopping', 'transport'], 140],
+     ['h2', 'Дилшод Тохиров', '+998 91 200-00-02', 'Мирзо-Улугбек', 30, 41, 4.8, true, ['medical', 'transport'], 260],
+     ['h3', 'Сабина Алиева', '+998 91 200-00-03', 'Яшнабад', 19, 33, 4.9, true, ['kids', 'psych'], 185],
+     ['h4', 'Рустам Назаров', '+998 91 200-00-04', 'Юнусабад', 7, 12, 4.7, true, ['legal', 'translate', 'tech'], 65],
+     ['h5', 'Камола Эргашева', '+998 91 200-00-05', 'Алмазар', 10, 18, 4.8, false, ['repair', 'tech'], 90]]
+      .forEach(([k, name, phone, dist, base, bp, rating, avail, skills, coins]) => {
+        H[k] = addUser({ role: 'helper', name, phone, dist, base, bp, rating, rcnt: 10, avail, skills, coins }, demoHash);
+        run('INSERT INTO coin_log (user_id,amount,reason,ts) VALUES (?,?,?,?)', H[k], coins, 'Коины за помощь до запуска платформы', now - 30 * DAY);
+      });
+    const S1 = addUser({ role: 'student', name: 'Малика Турсунова', phone: '+998 94 400-00-01', dist: 'Мирзо-Улугбек', school: 'НУУз, факультет психологии', coins: 15 }, demoHash);
+    addUser({ role: 'student', name: 'Жасур Абдуллаев', phone: '+998 94 400-00-02', dist: 'Юнусабад', school: 'ТашГТУ, 2 курс' }, demoHash);
+
+    let rid = 0;
+    const mk = (title, catName, dist, uk, hk, status, ageMin, desc, due = 3, rating = null) => {
+      rid++;
+      const [px, py] = DISTRICTS[dist];
+      const ts = now - ageMin * MIN;
+      const id = Number(run(
+        `INSERT INTO requests (title,descr,cat_id,dist,addr,phone,x,y,user_id,helper_id,status,due_days,rating,created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        title, desc || 'Нужна помощь с повседневным делом. Подробности уточнит помощник по телефону.', cat[catName], dist,
+        ADDR[rid % ADDR.length], one('SELECT phone FROM users WHERE id=?', U[uk]).phone,
+        px + ((rid * 37) % 21) - 10, py + ((rid * 53) % 17) - 8, U[uk], hk ? H[hk] : null, status, due, rating, ts,
+      ).lastInsertRowid);
+      const steps = STATUSES.slice(0, STATUSES.indexOf(status) + 1);
+      const gap = Math.min((now - ts) / (steps.length + 1), 2 * HOUR);
+      steps.forEach((s, i) => run('INSERT INTO request_log (req_id,status,ts) VALUES (?,?,?)', id, s, ts + i * gap));
+      return id;
+    };
+    mk('Помощь с покупкой продуктов', 'Покупки', 'Чиланзар', 'u2', 'h1', 'assigned', 2, 'Нужно купить продукты в магазине рядом с домом.', 2);
+    mk('Нужна помощь пожилому человеку', 'Пожилые люди', 'Яшнабад', 'u3', null, 'new', 5, 'Пожилой сосед не может выйти на улицу один. Нужен человек для сопровождения и мелких дел.');
+    mk('Доставка лекарств', 'Медицина', 'Мирзо-Улугбек', 'u4', 'h2', 'accepted', 8, 'Забрать лекарства в аптеке и привезти домой.', 1);
+    mk('Помощь семье с детьми', 'Семьи и дети', 'Учтепинский район', 'u5', null, 'new', 12, 'Многодетная семья просит помочь с детьми на несколько часов.');
+    mk('Ремонт компьютера', 'Другое', 'Алмазар', 'u2', 'h5', 'assigned', 15, 'Компьютер не включается, нужна диагностика.', 5);
+    mk('Сходить в аптеку', 'Медицина', 'Чиланзар', 'u1', 'h1', 'progress', 90, 'Купить лекарства по списку, рецепт отдам при встрече.', 1);
+    [['Доставка продуктов', 'Покупки', 'Чиланзар', 'u1', 'h3', 4], ['Сопровождение к врачу', 'Медицина', 'Яшнабад', 'u3', 'h1', 6],
+     ['Помощь с уборкой', 'Пожилые люди', 'Юнусабад', 'u4', 'h1', 9], ['Присмотреть за ребёнком', 'Семьи и дети', 'Алмазар', 'u5', 'h5', 11],
+     ['Купить лекарства по рецепту', 'Медицина', 'Мирабад', 'u2', 'h2', 14], ['Настроить телефон', 'Другое', 'Шайхантахур', 'u3', 'h4', 18],
+     ['Принести воду', 'Пожилые люди', 'Сергели', 'u4', 'h2', 21], ['Продукты на неделю', 'Покупки', 'Мирзо-Улугбек', 'u2', 'h3', 5],
+     ['Помощь с оформлением справки', 'Другое', 'Учтепинский район', 'u5', 'h5', 7], ['Отвезти в поликлинику', 'Медицина', 'Чиланзар', 'u4', 'h2', 8],
+     ['Игры с детьми после школы', 'Семьи и дети', 'Яшнабад', 'u3', 'h3', 12], ['Помощь по дому', 'Пожилые люди', 'Мирабад', 'u2', 'h4', 16],
+     ['Купить хлеб и молоко', 'Покупки', 'Алмазар', 'u5', 'h5', 20], ['Вызвать мастера', 'Другое', 'Юнусабад', 'u4', 'h4', 22],
+     ['Купить лекарства', 'Медицина', 'Сергели', 'u3', 'h2', 24], ['Прогулка с бабушкой', 'Пожилые люди', 'Чиланзар', 'u1', 'h1', 2]]
+      .forEach(([t, c, d, u, h, days], i) => mk(t, c, d, u, h, 'done', days * 1440 + ((i + 7) * 37) % 600, null, 3, 5));
+
+    for (const [name, phone, dist, skills, about, days] of [
+      ['Бахтиёр Умаров', '+998 93 300-00-01', 'Сергели', ['transport', 'shopping'], 'Есть автомобиль, могу возить продукты и лекарства', 1],
+      ['Зарина Хасанова', '+998 93 300-00-02', 'Мирабад', ['medical', 'elderly'], 'Медсестра, помогу с уходом за пожилыми', 3],
+      ['Тимур Исмаилов', '+998 93 300-00-03', 'Шайхантахур', ['tech'], 'Настройка техники и интернета', 5],
+      ['Нигора Каримова', '+998 93 300-00-05', 'Мирзо-Улугбек', ['legal', 'translate'], 'Юрист, проконсультирую по пенсиям, пособиям и документам', 2],
+      ['Лола Мирзаева', '+998 93 300-00-04', 'Юнусабад', ['kids'], 'Студентка педвуза, могу сидеть с детьми', 6]])
+      run('INSERT INTO volunteers (name,phone,dist,skills,about,created_at) VALUES (?,?,?,?,?,?)', name, phone, dist, JSON.stringify(skills), about, now - days * DAY);
+
+    for (const [f, a, text, st] of [['u3', 'h2', 'Помощник опоздал на 40 минут и не предупредил.', 'open'], ['u2', 'h4', 'Не ответил на звонок по заявке.', 'open'],
+      ['u4', 'h3', 'Спасибо за быструю помощь, но в заявке указали не тот район.', 'closed']])
+      run('INSERT INTO complaints (from_id,against_id,text,status,created_at) VALUES (?,?,?,?,?)', U[f], H[a], text, st, now - DAY);
+
+    const admin = one(`SELECT id FROM users WHERE role='admin' LIMIT 1`).id;
+    for (const [to, text, ago] of [[H.h1, 'Вам назначена заявка «Помощь с покупкой продуктов»', 2 * MIN], [H.h1, 'Ваш рейтинг обновлён: 4.9', 5 * HOUR],
+      [U.u1, 'Заявка «Прогулка с бабушкой» выполнена. Скажите спасибо помощнику', 2 * DAY], [admin, 'Новая заявка «Нужна помощь пожилому человеку»', 5 * MIN],
+      [admin, 'Новая заявка «Помощь семье с детьми»', 12 * MIN]])
+      run('INSERT INTO notifications (user_id,text,ts) VALUES (?,?,?)', to, text, now - ago);
+    // одну выполненную заявку оставим без оценки, чтобы было что «поблагодарить»
+    run(`UPDATE requests SET rating=NULL WHERE title='Прогулка с бабушкой'`);
+
+    // немного учебного прогресса, чтобы в рейтинге учащихся было кого показать
+    ensureCourses();
+    const course = Object.fromEntries(db.prepare('SELECT id,title FROM courses').all().map((c) => [c.title, c.id]));
+    for (const [who, title, items] of [
+      [H.h3, 'Первая помощь', [['fa-v1', 1], ['fa-v2', 1], ['fa-q', 1], ['fa-g1', 1], ['fa-g2', 1]]],
+      [H.h3, 'Основы волонтёрства', [['vo-v1', 1], ['vo-q', 1]]],
+      [H.h1, 'Как помогать пожилым людям', [['el-v1', 1], ['el-q', 0.75], ['el-g', 1]]],
+      [U.u4, 'Защита от мошенников', [['sc-v1', 1], ['sc-q', 1]]],
+      [H.h2, 'Первая помощь', [['fa-v1', 1], ['fa-q', 0.8]]],
+      [S1, 'Основы волонтёрства', [['vo-v1', 1], ['vo-q', 1], ['vo-g', 1]]],
+      [S1, 'Первая помощь', [['fa-v1', 1], ['fa-v2', 1]]]])
+      for (const [iid, score] of items) if (course[title])
+        run('INSERT OR IGNORE INTO learn_progress (user_id,course_id,item_id,score,ts) VALUES (?,?,?,?,?)', who, course[title], iid, score, now - DAY);
+    if (course['Основы волонтёрства'])
+      run('INSERT INTO coin_log (user_id,amount,reason,ref,ts) VALUES (?,?,?,?,?)', S1, 15, 'Курс «Основы волонтёрства» пройден', `course:${course['Основы волонтёрства']}`, now - DAY);
+  });
+}
+
+export const isDemo = () => !['0', 'false', 'no'].includes(String(process.env.DEMO ?? 'true').toLowerCase());
+
+export function initData() {
+  const empty = !one('SELECT id FROM users LIMIT 1');
+  if (empty && isDemo()) { seedDemo(); console.log('[socio] загружены демо-данные'); }
+  ensureAdmin();
+  ensureCategories();
+  ensureCourses();
+  ensureRewards(isDemo());
+}

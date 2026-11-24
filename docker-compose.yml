@@ -1,0 +1,16 @@
+services:
+  socio:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # DEMO: "false" — чистая база без тестовых людей и заявок
+      DEMO: "true"
+      ADMIN_PHONE: "+998 90 000-00-00"
+      ADMIN_PASSWORD: "change-me-please"
+    volumes:
+      - socio-data:/data
+    restart: unless-stopped
+
+volumes:
+  socio-data:
