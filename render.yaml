@@ -1,0 +1,21 @@
+# Деплой на Render в один клик: New → Blueprint → выбрать репозиторий.
+services:
+  - type: web
+    name: socio
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: DEMO
+        value: "true"
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: SECRET
+        generateValue: true
+      # Вход через Google: вставьте Client ID в панели Render (Environment) после создания сервиса
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+    disk:
+      name: socio-data
+      mountPath: /data
+      sizeGB: 1
