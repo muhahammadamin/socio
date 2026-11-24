@@ -242,7 +242,7 @@ td select{min-width:190px;padding:7px 10px}
 .lhero .btn.ghost{color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
 .lhero .mapcard{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:14px}
 .lhero .mapcard .note{color:rgba(255,255,255,.7);margin-top:8px}
-.counters{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:-44px;position:relative}
+.counters{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:-44px;position:relative}
 .counter{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);padding:22px}
 .counter b{display:block;font-size:36px;font-weight:800;letter-spacing:-1px;line-height:1}
 .counter span{color:var(--muted);font-weight:600}
@@ -568,7 +568,7 @@ td select{min-width:190px;padding:7px 10px}
 @media (max-width:1180px){.grid3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.grid3>.stack:first-child{grid-column:1/-1}}
 @media (max-width:960px){
   .lhero .wrap,.split,.cta{grid-template-columns:1fr}
-  .counters{grid-template-columns:repeat(2,1fr)}
+  .counters{grid-template-columns:repeat(2,1fr)}.counters>:first-child{grid-column:1/-1}
   .steps{grid-template-columns:repeat(2,1fr)}
   .sitenav{display:none}
   .cta{padding:28px}
@@ -609,12 +609,12 @@ td select{min-width:190px;padding:7px 10px}
 
 /* каскадное появление карточек */
 .page .tiles>*,.courses>*,.page .grid2>*,.page .grid3>*,.roles>*,.rolebig,.counter{animation:riseIn .45s cubic-bezier(.2,.8,.2,1) backwards}
-:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(2){animation-delay:.05s}
-:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(3){animation-delay:.1s}
-:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(4){animation-delay:.15s}
-:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(5){animation-delay:.2s}
-:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(6){animation-delay:.25s}
-:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(n+7){animation-delay:.3s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps,.counters)>:nth-child(2){animation-delay:.05s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps,.counters)>:nth-child(3){animation-delay:.1s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps,.counters)>:nth-child(4){animation-delay:.15s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps,.counters)>:nth-child(5){animation-delay:.2s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps,.counters)>:nth-child(6){animation-delay:.25s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps,.counters)>:nth-child(n+7){animation-delay:.3s}
 .page .hero{animation:riseIn .5s cubic-bezier(.2,.8,.2,1) backwards}
 .hero .bg{animation:floaty 7s ease-in-out infinite}
 

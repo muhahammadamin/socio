@@ -1,6 +1,7 @@
 // Маленькие компоненты без собственного состояния, собранные в одном месте.
 import { h } from 'vue';
 import Icon from './Icon.vue';
+import CountUp from './CountUp.vue';
 import { ST } from '../util.js';
 import { catOf } from '../store.js';
 
@@ -30,7 +31,7 @@ Empty.props = ['title', 'text'];
 
 export const Tile = ({ color, icon, label, value, sub }) => h('div', { class: ['tile', color] }, [
   h('span', { class: 'ti' }, [h(Icon, { name: icon })]),
-  h('div', [h('div', { class: 'tl' }, label), h('div', { class: 'tv num' }, value), h('div', { class: 'ts' }, sub)]),
+  h('div', [h('div', { class: 'tl' }, label), h('div', { class: 'tv' }, [h(CountUp, { value })]), h('div', { class: 'ts' }, sub)]),
 ]);
 Tile.props = ['color', 'icon', 'label', 'value', 'sub'];
 

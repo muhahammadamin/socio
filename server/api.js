@@ -110,6 +110,7 @@ api.get('/public', wrap(async () => {
       done: done + base.d,
       people: (await one(`SELECT COUNT(DISTINCT user_id) n FROM requests WHERE status='done'`)).n + base.p,
       helpers: (await one(`SELECT COUNT(*) n FROM users WHERE role='helper'`)).n,
+      users: (await one(`SELECT COUNT(*) n FROM users WHERE role!='admin'`)).n,
       open: (await one(`SELECT COUNT(*) n FROM requests WHERE status!='done'`)).n,
       districts: DISTRICT_NAMES.length,
     },

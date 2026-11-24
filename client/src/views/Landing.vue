@@ -6,6 +6,7 @@ import Icon from '../components/Icon.vue';
 import CityMap from '../components/CityMap.vue';
 import SiteBar from '../components/SiteBar.vue';
 import { Avatar } from '../components/ui.js';
+import CountUp from '../components/CountUp.vue';
 import { ROLES } from './register/roles.js';
 
 const P = ref(null);
@@ -80,10 +81,11 @@ const STEPS = [
       </section>
 
       <div class="counters" style="margin-top:40px">
-        <div class="counter"><b class="num">{{ P?.stats.done ?? '—' }}</b><span>добрых дел выполнено</span></div>
-        <div class="counter"><b class="num">{{ P?.stats.people ?? '—' }}</b><span>людям помогли</span></div>
-        <div class="counter"><b class="num">{{ P?.stats.helpers ?? '—' }}</b><span>помощников в команде</span></div>
-        <div class="counter"><b class="num">{{ P?.stats.districts ?? '—' }}</b><span>районов города</span></div>
+        <div class="counter"><b><CountUp :value="P?.stats.users ?? '—'" /></b><span>зарегистрировано на платформе</span></div>
+        <div class="counter"><b><CountUp :value="P?.stats.done ?? '—'" /></b><span>добрых дел выполнено</span></div>
+        <div class="counter"><b><CountUp :value="P?.stats.people ?? '—'" /></b><span>людям помогли</span></div>
+        <div class="counter"><b><CountUp :value="P?.stats.helpers ?? '—'" /></b><span>помощников в команде</span></div>
+        <div class="counter"><b><CountUp :value="P?.stats.districts ?? '—'" /></b><span>районов города</span></div>
       </div>
 
       <section class="section" id="how">
