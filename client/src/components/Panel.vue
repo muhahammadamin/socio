@@ -65,7 +65,9 @@ function closeReq() { const q = { ...route.query }; delete q.r; router.replace({
         <RouterLink class="iconbtn" :to="`${base}/notifications`" aria-label="Уведомления"><Icon name="bell" /><span v-if="unread()" class="badge">{{ unread() }}</span></RouterLink>
         <Avatar :name="S.me.name" :size="38" />
       </div>
-      <main class="content"><RouterView /></main>
+      <main class="content">
+        <RouterView v-slot="{ Component, route: r }"><div class="page" :key="r.path"><component :is="Component" /></div></RouterView>
+      </main>
     </div>
   </div>
   <RequestModal v-if="reqId" :id="reqId" @close="closeReq" />

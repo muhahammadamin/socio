@@ -16,7 +16,9 @@ function closeReq() { const q = { ...route.query }; delete q.r; router.replace({
 <template>
   <div v-if="S.me" class="site rolesite">
     <RoleHeader />
-    <main class="wrap rs-main"><RouterView /></main>
+    <main class="wrap rs-main">
+      <RouterView v-slot="{ Component, route: r }"><div class="page" :key="r.path"><component :is="Component" /></div></RouterView>
+    </main>
     <footer class="footer">
       <div class="wrap">
         <strong>Socio</strong><span>Помогаем вместе · Ташкент</span>

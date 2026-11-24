@@ -592,4 +592,66 @@ td select{min-width:190px;padding:7px 10px}
   .hero{padding:24px 20px}.hero h1{font-size:26px}
 }
 @media (max-width:520px){.catrow{flex-direction:column}.coinhero .earn{margin-left:0;width:100%}.match,.newcourse,.two,.demo .roles,.steps{grid-template-columns:1fr}.hcard{grid-template-columns:1fr}.timeline li{font-size:10px}.counter b{font-size:28px}.sitebar .act .btn.ghost{display:none}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---------- анимации ---------- */
+@keyframes fadeIn{from{opacity:0}}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}}
+@keyframes riseIn{from{opacity:0;transform:translateY(14px) scale(.98)}}
+@keyframes popIn{from{opacity:0;transform:translateY(16px) scale(.96)}}
+@keyframes pulseDot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--p-green) 55%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes badgePop{0%{transform:scale(0)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes floaty{0%,100%{transform:translateY(-50%) rotate(0)}50%{transform:translateY(calc(-50% - 10px)) rotate(-4deg)}}
+@keyframes shimmer{from{background-position:-200% 0}to{background-position:200% 0}}
+
+/* переходы между страницами (backwards — после анимации transform не остаётся) */
+.pagefade{animation:fadeIn .3s ease-out backwards}
+.page{animation:pageIn .35s cubic-bezier(.2,.8,.2,1) backwards}
+
+/* каскадное появление карточек */
+.page .tiles>*,.courses>*,.page .grid2>*,.page .grid3>*,.roles>*,.rolebig,.counter{animation:riseIn .45s cubic-bezier(.2,.8,.2,1) backwards}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(2){animation-delay:.05s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(3){animation-delay:.1s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(4){animation-delay:.15s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(5){animation-delay:.2s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(6){animation-delay:.25s}
+:is(.tiles,.courses,.grid2,.grid3,.roles,.steps)>:nth-child(n+7){animation-delay:.3s}
+.page .hero{animation:riseIn .5s cubic-bezier(.2,.8,.2,1) backwards}
+.hero .bg{animation:floaty 7s ease-in-out infinite}
+
+/* модальные окна */
+.modalback{animation:fadeIn .2s ease-out;backdrop-filter:blur(3px)}
+.modal{animation:popIn .3s cubic-bezier(.2,.9,.3,1.2)}
+
+/* интерактивность */
+.btn{transition:transform .15s,filter .15s,box-shadow .15s}
+.btn:not([disabled]):hover{transform:translateY(-1px);box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 25%,transparent)}
+.btn:not([disabled]):active{transform:translateY(0) scale(.97)}
+.btn.ghost:not([disabled]):hover,.btn.red:not([disabled]):hover{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.iconbtn{transition:background .15s,transform .15s}
+.iconbtn:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.iconbtn:active{transform:scale(.9)}
+.iconbtn .badge,.nav .badge{animation:badgePop .4s cubic-bezier(.2,.9,.3,1.4)}
+.chip{transition:background .15s,border-color .15s,color .15s,transform .15s}
+.chip:hover{transform:translateY(-1px)}
+.chip:active{transform:scale(.95)}
+.nav a,.nav button{transition:background .15s,color .15s,padding-left .2s}
+.nav a:not(.router-link-exact-active):hover{padding-left:16px}
+.tile,.counter{transition:transform .2s,box-shadow .2s}
+.tile:hover,.counter:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.tile .ti{transition:transform .3s cubic-bezier(.2,.9,.3,1.4)}
+.tile:hover .ti{transform:scale(1.1) rotate(-6deg)}
+.card{transition:box-shadow .2s}
+.row{transition:background .15s}
+button.row:hover,a.row:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.course{transition:transform .2s,box-shadow .2s}
+.course:hover{transform:translateY(-4px);box-shadow:0 14px 36px color-mix(in srgb,var(--c) 22%,transparent)}
+.coinchip{transition:transform .15s}
+.coinchip:hover{transform:scale(1.06)}
+.live:not(.off) i{animation:pulseDot 2s infinite}
+.stars button{transition:transform .15s,color .15s}
+.stars button:hover{transform:scale(1.2)}
+.timeline li::before,.timeline li::after{transition:background .4s}
+#toast{transition:opacity .25s,transform .35s cubic-bezier(.2,.9,.3,1.4)}
+input,select,textarea{transition:border-color .15s,box-shadow .15s}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
