@@ -1,9 +1,12 @@
 # Деплой на Render в один клик: New → Blueprint → выбрать репозиторий.
+# Бесплатный тариф: диска нет, база SQLite живёт в контейнере и
+# СТИРАЕТСЯ при каждом перезапуске/обновлении (и после засыпания сервиса).
+# Для постоянной работы: plan: starter + блок disk (см. ниже).
 services:
   - type: web
     name: socio
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /api/health
     envVars:
       - key: DEMO
@@ -15,7 +18,8 @@ services:
       # Вход через Google: вставьте Client ID в панели Render (Environment) после создания сервиса
       - key: GOOGLE_CLIENT_ID
         sync: false
-    disk:
-      name: socio-data
-      mountPath: /data
-      sizeGB: 1
+    # Постоянное хранение данных (только на платном тарифе):
+    # disk:
+    #   name: socio-data
+    #   mountPath: /data
+    #   sizeGB: 1
