@@ -35,6 +35,7 @@ const routes = [
   {
     path: '/admin', component: Panel, meta: { role: 'admin' }, children: [
       { path: '', component: () => import('./views/admin/Home.vue'), meta: { title: 'Главная' } },
+      { path: 'people', component: () => import('./views/admin/People.vue'), meta: { title: 'Все участники' } },
       { path: 'requests', component: () => import('./views/admin/Requests.vue'), meta: { title: 'Все заявки' } },
       { path: 'volunteers', component: () => import('./views/admin/Volunteers.vue'), meta: { title: 'Волонтёры' } },
       { path: 'helpers', component: () => import('./views/admin/Helpers.vue'), meta: { title: 'Помощники' } },

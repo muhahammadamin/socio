@@ -11,7 +11,7 @@ const route = useRoute(), router = useRouter();
 const base = computed(() => HOME[S.me.role]);
 
 const NAV = {
-  admin: [['', 'Главная', 'home'], ['requests', 'Все заявки', 'list'], ['volunteers', 'Волонтёры', 'users'], ['helpers', 'Помощники', 'shield'],
+  admin: [['', 'Главная', 'home'], ['people', 'Все участники', 'users'], ['requests', 'Все заявки', 'list'], ['volunteers', 'Волонтёры', 'users'], ['helpers', 'Помощники', 'shield'],
     ['students', 'Студенты', 'book'], ['users', 'Пользователи', 'user'], ['stats', 'Статистика', 'chart'], ['categories', 'Категории', 'grid'], ['learning', 'Обучение', 'play'],
     ['rewards', 'Награды', 'coin'], ['complaints', 'Жалобы', 'flag'], ['settings', 'Настройки', 'sliders']],
   helper: [['', 'Главная', 'home'], ['tasks', 'Мои заявки', 'list'], ['history', 'История', 'history'], ['stats', 'Статистика', 'chart'], ['coins', 'Коины', 'coin'], ['/academy', 'Академия', 'book'], ['notifications', 'Уведомления', 'bell'], ['profile', 'Профиль', 'user']],

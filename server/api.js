@@ -43,7 +43,7 @@ const genPassword = () => crypto.randomBytes(4).toString('hex');
 /* ---------- представления ---------- */
 const pubUser = async (u) => u && ({
   id: u.id, role: u.role, name: u.name, phone: u.phone, dist: u.dist, avail: !!u.avail, balance: u.balance, coins: u.coins,
-  google: !!u.google_sub,
+  google: !!u.google_sub, createdAt: u.created_at,
   ...(u.role === 'user' ? { needs: parseSkills(u.needs) } : {}),
   ...(u.role === 'helper' ? { skills: parseSkills(u.skills), verified: !!u.verified, ...(await helperStats(u)) } : {}),
   ...(u.role === 'student' ? await studentStats(u) : {}),
