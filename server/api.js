@@ -3,7 +3,8 @@ import crypto from 'node:crypto';
 import { one, all, run, tx } from './db.js';
 import { authenticate, allow, checkPassword, hashPassword, makeToken, readToken, loginLimiter, countFailure, makeTicket, readTicket, verifyGoogle } from './auth.js';
 import { subscribe, changed, changedAll, notify, notifyAdmins } from './events.js';
-import { seedDemo, isDemo, DEMO_PASSWORD } from './seed.js';
+import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser } from './seed.js';
+import { classifySource, ownHosts } from './source.js';
 import { publicLearnRoutes, adminLearnRoutes } from './learn.js';
 import { addCoins, rewardRoutes } from './coins.js';
 import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, nearestDistrict, phoneKey } from '../shared/constants.js';
@@ -146,7 +147,8 @@ api.post('/visit', wrap(async (req) => {
       const n = visitLimit.get(req.ip) || 0;
       if (n < 20) {
         visitLimit.set(req.ip, n + 1);
-        await run(`INSERT OR IGNORE INTO visitors (id, first_ts, last_ts) VALUES (?,?,?)`, id, now, now);
+        const src = classifySource(req.body?.src, req.get('user-agent'), ownHosts(req));
+        await run(`INSERT OR IGNORE INTO visitors (id, first_ts, last_ts, source, source_detail) VALUES (?,?,?,?,?)`, id, now, now, src.source, src.detail);
       }
     }
   }
@@ -203,7 +205,8 @@ api.post('/auth/admin-login', loginLimiter, wrap(async (req) => await login(req,
  * google — данные проверенного Google-аккаунта (тогда пароль не нужен).
  */
 const SELF_ROLES = ['user', 'student', 'helper'];
-async function createAccount(b, google = null) {
+async function createAccount(req, b, google = null) {
+  const src = classifySource(b.src, req.get('user-agent'), ownHosts(req));
   const role = SELF_ROLES.includes(b.role) ? b.role : 'user';
   const name = str(b.name ?? google?.name, 2, 80, 'Введите имя и фамилию.'), ph = phone(b.phone), d = dist(b.dist);
   const pass = google ? '!google' : hashPassword(password(b.password)); // у Google-аккаунта пароля нет: такой хэш не совпадёт ни с одним паролем
@@ -211,8 +214,8 @@ async function createAccount(b, google = null) {
   const sk = role === 'helper' ? skills(b.skills) : '[]';
   const nd = role === 'user' ? await needs(b.needs) : '[]';
   if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(ph))) throw new Bad('Этот телефон уже зарегистрирован. Войдите в аккаунт.', 409);
-  const id = Number((await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,school,skills,needs,google_sub,email,verified,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    role, name, ph, phoneKey(ph), pass, d, school, sk, nd, google?.sub ?? null, google?.email ?? '', role === 'helper' ? 0 : 1, Date.now())).lastInsertRowid);
+  const id = Number((await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,school,skills,needs,google_sub,email,verified,source,source_detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    role, name, ph, phoneKey(ph), pass, d, school, sk, nd, google?.sub ?? null, google?.email ?? '', role === 'helper' ? 0 : 1, src.source, src.detail, Date.now())).lastInsertRowid);
   if (role === 'student') await notifyAdmins(`Новый студент: ${name} (${school})`);
   if (role === 'helper') await notifyAdmins(`Новый волонтёр зарегистрировался: ${name} (${d}). Проверьте его, чтобы назначать заявки.`);
   await changed();
@@ -220,7 +223,7 @@ async function createAccount(b, google = null) {
 }
 api.post('/auth/register', loginLimiter, wrap(async (req) => {
   countFailure(req); // регистрации тоже ограничены, чтобы не плодили аккаунты
-  return await createAccount(req.body || {});
+  return await createAccount(req, req.body || {});
 }));
 
 /* вход и регистрация через Google */
@@ -246,7 +249,7 @@ api.post('/auth/google/complete', loginLimiter, wrap(async (req) => {
   if (!t) throw new Bad('Сессия Google истекла. Нажмите «Войти через Google» ещё раз.', 401);
   if (await one('SELECT id FROM users WHERE google_sub=?', t.sub)) throw new Bad('Этот Google-аккаунт уже зарегистрирован. Войдите через Google.', 409);
   countFailure(req);
-  return await createAccount({ ...req.body, name: req.body?.name || t.name }, { sub: t.sub, email: t.email, name: t.name });
+  return await createAccount(req, { ...req.body, name: req.body?.name || t.name }, { sub: t.sub, email: t.email, name: t.name });
 }));
 
 /* ---------- всё ниже — только для вошедших ---------- */
@@ -259,10 +262,13 @@ api.get('/bootstrap', wrap(async (req) => {
     notifications: (await all('SELECT id, text, req_id reqId, ts, read FROM notifications WHERE user_id=? ORDER BY ts DESC LIMIT 100', u.id)).map((n) => ({ ...n, read: !!n.read })),
   };
   if (u.role === 'admin') {
-    out.helpers = await Promise.all((await all(`SELECT * FROM users WHERE role='helper' ORDER BY id`)).map(pubUser));
-    out.users = await Promise.all((await all(`SELECT * FROM users WHERE role='user' ORDER BY id`)).map(pubUser));
+    // администратор видит, откуда пришёл каждый участник
+    const withSource = async (x) => ({ ...(await pubUser(x)), source: x.source || 'unknown', sourceDetail: x.source_detail || '' });
+    out.helpers = await Promise.all((await all(`SELECT * FROM users WHERE role='helper' ORDER BY id`)).map(withSource));
+    out.users = await Promise.all((await all(`SELECT * FROM users WHERE role='user' ORDER BY id`)).map(withSource));
+    out.admins = await adminList();
     out.volunteers = (await all('SELECT * FROM volunteers ORDER BY created_at DESC')).map((v) => ({ ...v, skills: parseSkills(v.skills) }));
-    out.students = await Promise.all((await all(`SELECT * FROM users WHERE role='student' ORDER BY id DESC`)).map(pubUser));
+    out.students = await Promise.all((await all(`SELECT * FROM users WHERE role='student' ORDER BY id DESC`)).map(withSource));
     out.complaints = await all(`SELECT c.id, c.text, c.status, c.created_at ts, f.name from_name, a.name against_name, c.req_id reqId
       FROM complaints c LEFT JOIN users f ON f.id=c.from_id LEFT JOIN users a ON a.id=c.against_id ORDER BY c.status='closed', c.created_at DESC`);
   }
@@ -420,7 +426,47 @@ api.get('/admin/visitors', allow('admin'), wrap(async (req) => {
     activeToday: await cnt(`SELECT COUNT(*) n FROM visitors WHERE last_ts >= ?`, today),
     returning: await cnt(`SELECT COUNT(*) n FROM visitors WHERE last_ts - first_ts > ?`, DAYMS),
     days: perDay.map((n, i) => ({ ts: from + i * DAYMS, n })),
+    // источники за выбранный период: сколько пришло посетителей и сколько из них зарегистрировалось
+    sources: await sourceStats(from),
   };
+}));
+
+async function sourceStats(from) {
+  const by = new Map();
+  const get = (k) => by.get(k) || by.set(k, { source: k, visitors: 0, signups: 0, details: new Map() }).get(k);
+  for (const r of await all(`SELECT COALESCE(source,'unknown') s, source_detail d, COUNT(*) n FROM visitors WHERE first_ts >= ? GROUP BY s, d`, from)) {
+    const e = get(r.s); e.visitors += r.n;
+    if (r.d) e.details.set(r.d, (e.details.get(r.d) || 0) + r.n);
+  }
+  for (const r of await all(`SELECT COALESCE(source,'unknown') s, COUNT(*) n FROM users WHERE role!='admin' AND created_at >= ? GROUP BY s`, from)) get(r.s).signups += r.n;
+  return [...by.values()]
+    .map((e) => ({ ...e, details: [...e.details].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([d, n]) => ({ d, n })) }))
+    .sort((a, b) => b.visitors - a.visitors || b.signups - a.signups);
+}
+
+/* ---------- администраторы ----------
+   Главный администратор — тот, чей номер задан в ADMIN_PHONE: его нельзя удалить из панели. */
+const mainAdminKey = () => phoneKey(process.env.ADMIN_PHONE || DEFAULT_ADMIN_PHONE);
+const adminList = async () => (await all(`SELECT id, name, phone, phone_key, created_at FROM users WHERE role='admin' ORDER BY id`))
+  .map((a) => ({ id: a.id, name: a.name, phone: a.phone, createdAt: a.created_at, main: a.phone_key === mainAdminKey() }));
+api.post('/admins', allow('admin'), wrap(async (req) => {
+  const b = req.body || {};
+  const name = str(b.name, 2, 80, 'Введите имя администратора.'), ph = phone(b.phone);
+  if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(ph))) throw new Bad('Этот телефон уже зарегистрирован на сайте. Укажите другой номер.', 409);
+  const pw = b.password ? password(b.password) : genPassword();
+  await run(`INSERT INTO users (role,name,phone,phone_key,pass,source,created_at) VALUES ('admin',?,?,?,?,'admin',?)`, name, ph, phoneKey(ph), hashPassword(pw), Date.now());
+  await notifyAdmins(`${req.user.name} добавил администратора ${name}`);
+  await changed();
+  return { ok: true, password: pw };
+}));
+api.delete('/admins/:id', allow('admin'), wrap(async (req) => {
+  const a = await one(`SELECT id, name, phone_key FROM users WHERE id=? AND role='admin'`, Number(req.params.id));
+  if (!a) throw new Bad('Администратор не найден', 404);
+  if (a.id === req.user.id) throw new Bad('Нельзя удалить самого себя.');
+  if (a.phone_key === mainAdminKey()) throw new Bad('Главного администратора удалить нельзя.');
+  await tx(() => deleteUser(a.id));
+  await changed();
+  return { ok: true };
 }));
 
 api.post('/helpers', allow('admin'), wrap(async (req) => {
@@ -428,7 +474,7 @@ api.post('/helpers', allow('admin'), wrap(async (req) => {
   const name = str(b.name, 2, 80, 'Введите имя помощника.'), ph = phone(b.phone), d = dist(b.dist), sk = skills(b.skills, false);
   if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(ph))) throw new Bad('Этот телефон уже зарегистрирован.', 409);
   const pw = genPassword();
-  await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,created_at) VALUES ('helper',?,?,?,?,?,?,?)`, name, ph, phoneKey(ph), hashPassword(pw), d, sk, Date.now());
+  await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,source,created_at) VALUES ('helper',?,?,?,?,?,?,'admin',?)`, name, ph, phoneKey(ph), hashPassword(pw), d, sk, Date.now());
   await changed();
   return { ok: true, password: pw };
 }));

@@ -57,7 +57,8 @@ export default {
     joinBtn: 'Зарегистрироваться волонтёром',
     joinMore: 'Подробнее для волонтёров',
     joinNote: 'Можно через Google — это займёт минуту.',
-    footer: { categories: 'Направления помощи', volunteers: 'Волонтёрам', students: 'Студентам', login: 'Вход' },
+    guideLink: 'Подробно о волонтёрстве в Ташкенте: как начать и с чем помогают',
+    footer: { categories: 'Направления помощи', volunteers: 'Волонтёрам', students: 'Студентам', login: 'Вход', guide: 'Волонтёрство в Ташкенте' },
   },
   roles: {
     help: {

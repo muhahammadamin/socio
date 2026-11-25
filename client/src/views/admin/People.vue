@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { S } from '../../store.js';
 import { fdate } from '../../util.js';
-import { SKILLS } from '@shared/constants.js';
+import { SKILLS, SOURCES, sourceName } from '@shared/constants.js';
 import Icon from '../../components/Icon.vue';
 import { PageHead, Avatar, Empty } from '../../components/ui.js';
 
@@ -13,7 +13,7 @@ const KINDS = {
   helper: { t: 'Волонтёры', one: 'Волонтёр', icon: 'hand', color: 'green' },
   student: { t: 'Студенты', one: 'Студент', icon: 'book', color: 'orange' },
 };
-const kind = ref('all'), sort = ref('new');
+const kind = ref('all'), sort = ref('new'), source = ref('');
 
 const catName = (id) => S.cats.find((c) => c.id === id)?.name;
 const people = computed(() => [
@@ -29,17 +29,26 @@ const people = computed(() => [
 ]);
 const counts = computed(() => ({ all: people.value.length, user: S.users.length, helper: S.helpers.length, student: S.students.length }));
 
+// источники, которые реально встречаются среди участников, — для фильтра
+const sources = computed(() => {
+  const n = {};
+  for (const p of people.value) n[p.source || 'unknown'] = (n[p.source || 'unknown'] || 0) + 1;
+  return Object.entries(n).sort((a, b) => b[1] - a[1]);
+});
+const srcColor = (k) => SOURCES[k]?.color || '#0ea5b7';
+
 const q = computed(() => S.q.trim().toLowerCase());
 const rows = computed(() => people.value
   .filter((p) => kind.value === 'all' || p.role === kind.value)
-  .filter((p) => !q.value || `${p.name} ${p.phone} ${p.dist} ${p.info}`.toLowerCase().includes(q.value))
+  .filter((p) => !source.value || (p.source || 'unknown') === source.value)
+  .filter((p) => !q.value || `${p.name} ${p.phone} ${p.dist} ${p.info} ${sourceName(p.source)} ${p.sourceDetail || ''}`.toLowerCase().includes(q.value))
   .sort(sort.value === 'name' ? (a, b) => a.name.localeCompare(b.name, 'ru') : (a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
 
 // выгрузка текущего списка в CSV (открывается в Excel)
 function exportCsv() {
-  const head = ['Имя', 'Кто', 'Телефон', 'Район', 'Подробнее', 'Статистика', 'Дата регистрации', 'Вход через Google'];
+  const head = ['Имя', 'Кто', 'Телефон', 'Район', 'Подробнее', 'Статистика', 'Дата регистрации', 'Вход через Google', 'Откуда пришёл', 'Подробнее об источнике'];
   const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = rows.value.map((p) => [p.name, KINDS[p.role].one, p.phone, p.dist, p.info, p.stat, p.createdAt ? fdate(p.createdAt) : '', p.google ? 'да' : 'нет'].map(cell).join(';'));
+  const lines = rows.value.map((p) => [p.name, KINDS[p.role].one, p.phone, p.dist, p.info, p.stat, p.createdAt ? fdate(p.createdAt) : '', p.google ? 'да' : 'нет', sourceName(p.source), p.sourceDetail].map(cell).join(';'));
   const blob = new Blob(['﻿' + [head.map(cell).join(';'), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `socio-участники-${fdate(Date.now())}.csv` });
   a.click();
@@ -62,14 +71,22 @@ function exportCsv() {
   <div class="card">
     <div class="ch">
       <h2>{{ KINDS[kind].t }} <span class="note">· {{ rows.length }}</span></h2>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <label><span class="sr">Откуда пришли</span>
+        <select v-model="source" style="width:auto;font-weight:700">
+          <option value="">Все источники</option>
+          <option v-for="[k, n] in sources" :key="k" :value="k">{{ sourceName(k) }} · {{ n }}</option>
+        </select>
+      </label>
       <label><span class="sr">Сортировка</span>
         <select v-model="sort" style="width:auto;font-weight:700"><option value="new">Сначала новые</option><option value="name">По имени</option></select>
       </label>
+      </span>
     </div>
     <p v-if="q" class="note" style="margin:-4px 0 10px">Поиск: «{{ S.q }}». Строка поиска — вверху страницы.</p>
     <div v-if="rows.length" class="table-wrap">
       <table>
-        <thead><tr><th>Участник</th><th>Кто</th><th>Район</th><th>Подробнее</th><th>Статистика</th><th>Регистрация</th></tr></thead>
+        <thead><tr><th>Участник</th><th>Кто</th><th>Район</th><th>Подробнее</th><th>Статистика</th><th>Откуда пришёл</th><th>Регистрация</th></tr></thead>
         <tbody>
           <tr v-for="p in rows" :key="p.role + p.id">
             <td><span style="display:inline-flex;align-items:center;gap:10px"><Avatar :name="p.name" :size="34" /><span><b>{{ p.name }}</b><div class="note">{{ p.phone }}<template v-if="p.google"> · Google</template></div></span></span></td>
@@ -77,6 +94,7 @@ function exportCsv() {
             <td>{{ p.dist }}</td>
             <td style="max-width:260px">{{ p.info || '—' }}</td>
             <td class="note">{{ p.stat }}</td>
+            <td><span class="pill" :style="{ '--x': srcColor(p.source) }">{{ sourceName(p.source) }}</span><div v-if="p.sourceDetail" class="note" style="margin-top:4px;max-width:180px;overflow-wrap:anywhere">{{ p.sourceDetail }}</div></td>
             <td class="num">{{ p.createdAt ? fdate(p.createdAt) : '—' }}</td>
           </tr>
         </tbody>

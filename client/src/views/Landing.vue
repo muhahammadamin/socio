@@ -136,6 +136,7 @@ const stats = computed(() => {
         <div class="seotext">
           <p><b>Socio</b>{{ t('landing.about1') }}</p>
           <p>{{ tm('landing.about2')[0] }}<RouterLink to="/register/student">{{ tm('landing.about2')[1] }}</RouterLink>{{ tm('landing.about2')[2] }}</p>
+          <p><RouterLink to="/volunteering">{{ t('landing.guideLink') }} <Icon name="arrow" /></RouterLink></p>
         </div>
         <div class="faq">
           <h3>{{ t('landing.faqTitle') }}</h3>
@@ -163,6 +164,7 @@ const stats = computed(() => {
         <span class="spacer" />
         <RouterLink to="/categories">{{ t('landing.footer.categories') }}</RouterLink>
         <RouterLink to="/volunteers">{{ t('landing.footer.volunteers') }}</RouterLink>
+        <RouterLink to="/volunteering">{{ t('landing.footer.guide') }}</RouterLink>
         <RouterLink to="/academy">{{ t('landing.footer.students') }}</RouterLink>
         <RouterLink to="/login">{{ t('landing.footer.login') }}</RouterLink>
       </div>

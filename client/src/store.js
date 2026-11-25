@@ -18,6 +18,7 @@ export const S = reactive({
   vols: [],
   students: [],
   complaints: [],
+  admins: [],
   mapOpen: false,
   q: '',
   toast: { text: '', bad: false, on: false },
@@ -48,7 +49,7 @@ export async function load() {
   const d = await api.get('/bootstrap');
   Object.assign(S, {
     me: d.me, demo: d.demo, districts: d.districts, cats: d.categories, reqs: d.requests, notes: d.notifications,
-    helpers: d.helpers || [], users: d.users || [], vols: d.volunteers || [], students: d.students || [], complaints: d.complaints || [], loaded: true,
+    helpers: d.helpers || [], users: d.users || [], vols: d.volunteers || [], students: d.students || [], complaints: d.complaints || [], admins: d.admins || [], loaded: true,
   });
   connectLive();
 }
@@ -76,7 +77,7 @@ export function signIn({ token, user }) {
 export function signOut() {
   localStorage.removeItem(TOKEN);
   disconnectLive();
-  Object.assign(S, { token: null, me: null, loaded: false, reqs: [], notes: [], helpers: [], users: [], vols: [], students: [], complaints: [], q: '', mapOpen: false });
+  Object.assign(S, { token: null, me: null, loaded: false, reqs: [], notes: [], helpers: [], users: [], vols: [], students: [], complaints: [], admins: [], q: '', mapOpen: false });
 }
 
 /* ---------- живые обновления (Server-Sent Events) ---------- */

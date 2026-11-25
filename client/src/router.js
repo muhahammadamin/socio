@@ -17,6 +17,8 @@ const routes = [
   // регистрация: шаг 1 — выбор роли, шаг 2 — отдельная страница для каждой роли
   { path: '/register', component: () => import('./views/register/Choose.vue'), meta: { title: 'Регистрация', guest: true } },
   { path: '/register/:as(help|volunteer|student)', component: () => import('./views/register/Form.vue'), meta: { title: 'Регистрация', guest: true } },
+  // статья о волонтёрстве для поисковиков и новичков
+  { path: '/volunteering', component: () => import('./views/Guide.vue'), meta: { title: 'Волонтёрство в Ташкенте' } },
   { path: '/categories', component: () => import('./views/CategoriesInfo.vue'), meta: { title: 'Направления помощи' } },
   // отдельная страница волонтёров: регистрация сразу в платформу
   { path: '/volunteers', component: () => import('./views/VolunteerPortal.vue'), meta: { title: 'Волонтёрам' } },
@@ -45,6 +47,7 @@ const routes = [
       { path: 'categories', component: () => import('./views/admin/Categories.vue'), meta: { title: 'Категории' } },
       { path: 'learning', component: () => import('./views/admin/Learning.vue'), meta: { title: 'Обучение' } },
       { path: 'rewards', component: () => import('./views/admin/Rewards.vue'), meta: { title: 'Награды' } },
+      { path: 'admins', component: () => import('./views/admin/Admins.vue'), meta: { title: 'Администраторы' } },
       { path: 'complaints', component: () => import('./views/admin/Complaints.vue'), meta: { title: 'Жалобы' } },
       { path: 'settings', component: Profile, meta: { title: 'Настройки' } },
       { path: 'notifications', component: Notifications, meta: { title: 'Уведомления' } },

@@ -57,7 +57,8 @@ export default {
     joinBtn: 'Sign up as a volunteer',
     joinMore: 'More for volunteers',
     joinNote: 'You can use Google — it takes a minute.',
-    footer: { categories: 'Help categories', volunteers: 'For volunteers', students: 'For students', login: 'Log in' },
+    guideLink: 'More about volunteering in Tashkent: how to start and what volunteers do',
+    footer: { categories: 'Help categories', volunteers: 'For volunteers', students: 'For students', login: 'Log in', guide: 'Volunteering in Tashkent' },
   },
   roles: {
     help: {

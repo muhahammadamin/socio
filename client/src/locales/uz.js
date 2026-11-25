@@ -58,7 +58,8 @@ export default {
     joinBtn: 'Volontyor sifatida roʻyxatdan oʻtish',
     joinMore: 'Volontyorlar uchun batafsil',
     joinNote: 'Google orqali ham mumkin — bir daqiqa vaqt oladi.',
-    footer: { categories: 'Yordam yoʻnalishlari', volunteers: 'Volontyorlarga', students: 'Talabalarga', login: 'Kirish' },
+    guideLink: 'Toshkentda volontyorlik haqida batafsil: qanday boshlash va nimada yordam berish',
+    footer: { categories: 'Yordam yoʻnalishlari', volunteers: 'Volontyorlarga', students: 'Talabalarga', login: 'Kirish', guide: 'Toshkentda volontyorlik' },
   },
   roles: {
     help: {

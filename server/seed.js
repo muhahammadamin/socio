@@ -19,7 +19,7 @@ async function addUser(u, passHash) {
 }
 
 /** Удаляет пользователя вместе с его заявками, уведомлениями, прогрессом и коинами (не полагаясь на ON DELETE). */
-async function deleteUser(id) {
+export async function deleteUser(id) {
   await run('DELETE FROM request_log WHERE req_id IN (SELECT id FROM requests WHERE user_id=?)', id);
   await run('UPDATE complaints SET req_id=NULL WHERE req_id IN (SELECT id FROM requests WHERE user_id=?)', id);
   await run('DELETE FROM requests WHERE user_id=?', id);
@@ -37,9 +37,11 @@ export const DEFAULT_ADMIN_PHONE = '+998 77-010-25-56';
  *  Если админ уже есть, а ADMIN_PHONE задан и отличается — переносит номер первому админу. */
 export async function ensureAdmin() {
   const phone = process.env.ADMIN_PHONE || DEFAULT_ADMIN_PHONE;
+  const key = phoneKey(phone);
+  // уже есть администратор с этим номером (админов может быть несколько) — ничего не делаем
+  if (await one(`SELECT id FROM users WHERE role='admin' AND phone_key=?`, key)) return;
   const admin = await one(`SELECT id, phone_key FROM users WHERE role='admin' ORDER BY id LIMIT 1`);
   if (admin) {
-    const key = phoneKey(phone);
     if (process.env.ADMIN_PHONE && admin.phone_key !== key) {
       const other = await one(`SELECT id, role, name FROM users WHERE phone_key=? AND id<>?`, key, admin.id);
       // Номер по умолчанию закреплён за администратором: обычный аккаунт с ним удаляется.

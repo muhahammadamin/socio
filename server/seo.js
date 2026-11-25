@@ -2,7 +2,8 @@
 // robots.txt и sitemap.xml. Адрес сайта — из SITE_URL или из заголовков запроса.
 // Языки: русский — без параметра, узбекский и английский — ?lang=uz / ?lang=en (связаны через hreflang).
 
-import { PAGE_META, FAQ, BRAND, LANGS, KEYWORDS, pageSeo } from '../shared/seo.js';
+import { PAGE_META, FAQ, BRAND, LANGS, KEYWORDS, SEO_NAV, pageSeo } from '../shared/seo.js';
+import { GUIDE } from '../shared/guide.js';
 
 // Закрытые разделы: кабинеты, панель управления, вход.
 const PRIVATE = /^\/(admin|helper|student|app|academy|login)(\/|$)/;
@@ -42,15 +43,62 @@ function jsonLd(base, lang) {
         inLanguage: LANGS,
         publisher: { '@id': `${base}/#org` },
       },
-      {
-        '@type': 'FAQPage',
-        inLanguage: lang,
-        mainEntity: FAQ[lang].map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
-      },
+      faqLd(lang, FAQ[lang]),
     ],
   };
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 }
+
+const faqLd = (lang, list) => ({
+  '@type': 'FAQPage',
+  inLanguage: lang,
+  mainEntity: list.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+});
+// Статья о волонтёрстве: Article + FAQ + «хлебные крошки»
+function guideLd(base, lang, url) {
+  const g = GUIDE[lang];
+  const data = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'Article', headline: g.h1, description: pageSeo('/volunteering', lang).description, inLanguage: lang, url, mainEntityOfPage: url,
+        author: { '@type': 'Organization', name: BRAND, url: `${base}/` }, publisher: { '@type': 'Organization', name: BRAND, logo: { '@type': 'ImageObject', url: `${base}/favicon.svg` } },
+        about: { '@type': 'Thing', name: lang === 'en' ? 'Volunteering' : lang === 'uz' ? 'Volontyorlik' : 'Волонтёрство' } },
+      faqLd(lang, g.faq),
+      { '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: BRAND, item: langUrl(base, '/', lang) },
+        { '@type': 'ListItem', position: 2, name: g.h1, item: url }] },
+    ],
+  };
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
+}
+
+/* Текст страницы в самом HTML: у каждой страницы — свой заголовок и описание, у статьи — весь текст.
+   Vue заменяет этот блок при запуске; поисковики и браузеры без JavaScript видят его сразу. */
+function renderBody(p, lang) {
+  const page = pageSeo(p, lang) || pageSeo('/', lang);
+  const link = (href, text) => `<a href="${esc(href + (lang === 'ru' ? '' : `?lang=${lang}`))}">${esc(text)}</a>`;
+  const out = [];
+  if (p === '/volunteering') {
+    const g = GUIDE[lang];
+    out.push(`<h1>${esc(g.h1)}</h1>`, `<p>${esc(g.lead)}</p>`);
+    for (const [h, ...blocks] of g.sections) {
+      out.push(`<h2>${esc(h)}</h2>`);
+      for (const b of blocks) out.push(Array.isArray(b) ? `<ul>${b.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : `<p>${esc(b)}</p>`);
+    }
+    out.push(`<h2>${esc(g.faqTitle)}</h2>`, ...g.faq.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`));
+  } else {
+    out.push(`<h1>${esc(page.title.replace(/\s*\|\s*Socio$/, ''))}</h1>`, `<p>${esc(page.description)}</p>`);
+    if (p === '/') out.push(...FAQ[lang].map(([q, a]) => `<h2>${esc(q)}</h2><p>${esc(a)}</p>`));
+  }
+  out.push(`<ul>${SEO_NAV[lang].filter(([h]) => h !== p).map(([h, t]) => `<li>${link(h, t)}</li>`).join('')}</ul>`);
+  return out.join('\n    ');
+}
+
+// Подтверждение сайта в Google Search Console и Яндекс.Вебмастере (коды — из переменных окружения).
+const verifyTags = () => [
+  process.env.GOOGLE_SITE_VERIFICATION && `<meta name="google-site-verification" content="${esc(process.env.GOOGLE_SITE_VERIFICATION)}">`,
+  process.env.YANDEX_VERIFICATION && `<meta name="yandex-verification" content="${esc(process.env.YANDEX_VERIFICATION)}">`,
+].filter(Boolean);
 
 export function renderHead(html, req) {
   const base = siteUrl(req);
@@ -72,14 +120,17 @@ export function renderHead(html, req) {
     `<meta name="twitter:card" content="summary">`,
     `<meta name="twitter:title" content="${esc(title)}">`,
     `<meta name="twitter:description" content="${esc(description)}">`,
+    ...verifyTags(),
   ];
   if (page) {
     for (const l of LANGS) tags.push(`<link rel="alternate" hreflang="${l}" href="${esc(langUrl(base, p, l))}">`);
     tags.push(`<link rel="alternate" hreflang="x-default" href="${esc(langUrl(base, p, 'ru'))}">`);
   }
   if (p === '/') tags.push(jsonLd(base, lang));
+  if (p === '/volunteering') tags.push(guideLd(base, lang, url));
 
   return html
+    .replace(/<!--seo-->[\s\S]*?<!--\/seo-->/, () => `<!--seo-->\n    ${renderBody(page ? p : '/', lang)}\n    <!--/seo-->`)
     .replace(/<html lang="[^"]*">/, `<html lang="${lang}">`)
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
     .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(description)}">`)

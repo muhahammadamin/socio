@@ -58,3 +58,21 @@ export function nearestDistrict(x, y) {
 }
 
 export const phoneKey = (p) => String(p ?? '').replace(/\D/g, '');
+
+/** Откуда человек пришёл на сайт. Свои метки из ссылок (?ref=blogger) показываются как есть. */
+export const SOURCES = {
+  telegram: { t: 'Telegram', color: '#229ed9' },
+  instagram: { t: 'Instagram', color: '#d62976' },
+  facebook: { t: 'Facebook', color: '#1877f2' },
+  youtube: { t: 'YouTube', color: '#e62117' },
+  tiktok: { t: 'TikTok', color: '#25c2c6' },
+  whatsapp: { t: 'WhatsApp', color: '#25d366' },
+  vk: { t: 'ВКонтакте', color: '#0077ff' },
+  google: { t: 'Google', color: '#f4b400' },
+  yandex: { t: 'Яндекс', color: '#fc3f1d' },
+  other: { t: 'Другие сайты', color: '#7c5ce6' },
+  direct: { t: 'Прямой заход', color: '#8a94a6' },
+  admin: { t: 'Добавлен администратором', color: '#3b5bf0' },
+  unknown: { t: 'Неизвестно', color: '#b8bfcc' },
+};
+export const sourceName = (k) => SOURCES[k || 'unknown']?.t || `Метка «${k}»`;

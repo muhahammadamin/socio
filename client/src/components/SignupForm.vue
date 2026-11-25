@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api.js';
 import { toast } from '../store.js';
 import { enter } from '../authflow.js';
+import { firstSource } from '../visit.js';
 import { t, tm, catT } from '../i18n.js';
 import Icon from './Icon.vue';
 import GoogleButton from './GoogleButton.vue';
@@ -68,7 +69,7 @@ async function submit() {
   if (!validate()) { general.value = t('signup.err.check'); return; }
   busy.value = true;
   try {
-    const body = { ...f, role: props.role };
+    const body = { ...f, role: props.role, src: firstSource() };
     await finish(await (g.value ? api.post('/auth/google/complete', { ...body, ticket: g.value.ticket }) : api.post('/auth/register', body)));
   } catch (e) { placeError(e.message); }
   finally { busy.value = false; }

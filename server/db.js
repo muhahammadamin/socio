@@ -206,4 +206,9 @@ await addCol('users', 'google_sub', 'TEXT');
 await addCol('users', 'email', `TEXT NOT NULL DEFAULT ''`);
 await addCol('users', 'verified', 'INTEGER NOT NULL DEFAULT 1');
 await addCol('users', 'needs', `TEXT NOT NULL DEFAULT '[]'`); // id категорий, с которыми человеку нужна помощь
+// откуда человек пришёл на сайт: канал (telegram, google, метка из ссылки…) и подробности (сайт, кампания)
+await addCol('users', 'source', 'TEXT');
+await addCol('users', 'source_detail', `TEXT NOT NULL DEFAULT ''`);
+await addCol('visitors', 'source', 'TEXT');
+await addCol('visitors', 'source_detail', `TEXT NOT NULL DEFAULT ''`);
 await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google ON users(google_sub) WHERE google_sub IS NOT NULL');

@@ -26,6 +26,12 @@ services:
       # Вход через Google: вставьте Client ID в панели Render (Environment) после создания сервиса
       - key: GOOGLE_CLIENT_ID
         sync: false
+      # Подтверждение сайта в Google Search Console и Яндекс.Вебмастере: вставьте код из мета-тега
+      # (только значение content="…"), затем в консоли отправьте sitemap.xml
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false
+      - key: YANDEX_VERIFICATION
+        sync: false
       # Turso: адрес базы (libsql://…) и токен доступа
       - key: TURSO_DATABASE_URL
         sync: false
