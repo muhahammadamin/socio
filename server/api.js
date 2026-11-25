@@ -111,6 +111,7 @@ api.get('/public', wrap(async () => {
       people: (await one(`SELECT COUNT(DISTINCT user_id) n FROM requests WHERE status='done'`)).n + base.p,
       helpers: (await one(`SELECT COUNT(*) n FROM users WHERE role='helper'`)).n,
       users: (await one(`SELECT COUNT(*) n FROM users WHERE role!='admin'`)).n,
+      visitors: await visitorCount(),
       open: (await one(`SELECT COUNT(*) n FROM requests WHERE status!='done'`)).n,
       districts: DISTRICT_NAMES.length,
     },
@@ -123,6 +124,35 @@ api.get('/public', wrap(async () => {
       .sort((a, b) => b.done - a.done).slice(0, 4).map(({ name, dist, done, rating }) => ({ name, dist, done, rating })),
   };
 }));
+/* ---------- счётчик посетителей ----------
+   Каждый браузер присылает свой случайный анонимный id (хранится в localStorage) — так один человек
+   считается один раз, даже если заходит много раз. Поисковые роботы не считаются. */
+const BOT = /bot|crawl|spider|slurp|yandex|bing|google|facebookexternalhit|telegram|whatsapp|preview|headless|lighthouse|curl|wget|python|node-fetch/i;
+const visitLimit = new Map(); // ip → [окно, новых id]: не больше 20 новых посетителей с одного адреса в час
+setInterval(() => visitLimit.clear(), 36e5).unref();
+// Все посетители = отмеченные браузеры + те, кто зарегистрировался ещё до появления счётчика
+// (их браузеры могли так и не отметиться). Кто зарегистрировался позже — уже есть среди посетителей.
+async function visitorCount() {
+  const v = await one(`SELECT COUNT(*) n, MIN(first_ts) since FROM visitors`);
+  const before = (await one(`SELECT COUNT(*) n FROM users WHERE role!='admin' AND created_at < ?`, v.since ?? Date.now())).n;
+  return v.n + before;
+}
+api.post('/visit', wrap(async (req) => {
+  const id = String(req.body?.id || '');
+  if (!/^[a-z0-9-]{16,64}$/i.test(id)) throw new Bad('Некорректный id');
+  if (!BOT.test(req.get('user-agent') || '')) {
+    const now = Date.now();
+    if ((await run(`UPDATE visitors SET last_ts=? WHERE id=?`, now, id)).changes === 0) {
+      const n = visitLimit.get(req.ip) || 0;
+      if (n < 20) {
+        visitLimit.set(req.ip, n + 1);
+        await run(`INSERT OR IGNORE INTO visitors (id, first_ts, last_ts) VALUES (?,?,?)`, id, now, now);
+      }
+    }
+  }
+  return { visitors: await visitorCount() };
+}));
+
 async function demoAccounts() {
   const pick = (role) => one(`SELECT name, phone FROM users WHERE role=? ORDER BY id LIMIT 1`, role);
   return [

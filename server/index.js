@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { initData } from './seed.js';
 import { api } from './api.js';
+import { seoRoutes, renderHead } from './seo.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEV = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
@@ -21,7 +22,18 @@ app.use((req, res, next) => {
   res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'X-Frame-Options': 'SAMEORIGIN' });
   next();
 });
+// Один основной адрес для поисковиков: www, *.onrender.com и http → 301 на SITE_URL.
+// /api не трогаем — проверка здоровья Render ходит по внутреннему адресу.
+const canonical = !DEV && process.env.SITE_URL ? new URL(process.env.SITE_URL) : null;
+if (canonical) {
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/') || (req.method !== 'GET' && req.method !== 'HEAD')) return next();
+    if (req.hostname === canonical.hostname && req.protocol === canonical.protocol.slice(0, -1)) return next();
+    res.redirect(301, canonical.origin + req.originalUrl);
+  });
+}
 app.use('/api', api);
+seoRoutes(app);
 
 if (DEV) {
   // Режим разработки: Vite работает внутри этого же сервера (один порт, горячая перезагрузка).
@@ -43,10 +55,11 @@ if (DEV) {
   }
   app.use('/assets', express.static(path.join(dist, 'assets'), { immutable: true, maxAge: '1y' }));
   app.use(express.static(dist, { index: false, maxAge: '1h' }));
+  const indexHtml = fs.readFileSync(indexFile, 'utf8');
   // SPA: все остальные GET-запросы отдают index.html
   app.use((req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-    res.set('Cache-Control', 'no-cache').sendFile(indexFile);
+    res.set('Cache-Control', 'no-cache').type('html').send(renderHead(indexHtml, req));
   });
 }
 

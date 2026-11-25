@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { S, HOME, LOGIN, load } from './store.js';
+import { pageSeo } from '@shared/seo.js';
+import { watch } from 'vue';
+import { lang } from './i18n.js';
 
 const Panel = () => import('./components/Panel.vue'); // только администратор
 const RoleSite = () => import('./components/RoleSite.vue'); // сайты ролей
@@ -104,4 +107,12 @@ router.beforeEach(async (to) => {
     if (S.me.role !== 'admin') return HOME[S.me.role];
   }
 });
-router.afterEach((to) => { document.title = `${to.meta.title ? to.meta.title + ' · ' : ''}Socio`; });
+// Публичные страницы получают SEO-заголовок и описание на языке сайта (те же, что сервер отдаёт в HTML).
+const descTag = document.querySelector('meta[name="description"]');
+function applyTitle(to) {
+  const seo = pageSeo(to.path.length > 1 ? to.path.replace(/\/+$/, '') : to.path, lang.value);
+  document.title = seo?.title || `${to.meta.title ? to.meta.title + ' · ' : ''}Socio`;
+  if (seo && descTag) descTag.content = seo.description;
+}
+router.afterEach(applyTitle);
+watch(lang, () => applyTitle(router.currentRoute.value));

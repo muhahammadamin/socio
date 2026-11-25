@@ -170,6 +170,12 @@ CREATE TABLE IF NOT EXISTS reward_codes (
   issued_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_codes_reward ON reward_codes(reward_id, user_id);
+-- посетители сайта: анонимный id браузера, без IP и личных данных
+CREATE TABLE IF NOT EXISTS visitors (
+  id       TEXT    PRIMARY KEY,
+  first_ts INTEGER NOT NULL,
+  last_ts  INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS shorts (
   id         INTEGER PRIMARY KEY,
   title      TEXT    NOT NULL,

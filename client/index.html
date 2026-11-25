@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Socio — платформа взаимопомощи в Ташкенте: оставьте заявку, и волонтёр рядом поможет с покупками, лекарствами и повседневными делами.">
+<title>Волонтёрство в Ташкенте — стать волонтёром или получить помощь | Socio</title>
+<meta name="description" content="Socio — платформа волонтёрства и взаимопомощи в Ташкенте. Станьте волонтёром в своём районе или бесплатно получите помощь: продукты, лекарства, сопровождение пожилых и повседневные дела.">
+<meta name="keywords" content="волонтёрство, волонтерство, волонтёрство в Ташкенте, стать волонтёром, волонтёр, волонтеры Ташкент, взаимопомощь, помощь пожилым, благотворительность, Узбекистан">
 <meta name="theme-color" content="#141936">
-<title>Socio</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +14,22 @@
 <script>document.documentElement.dataset.theme=localStorage.getItem('socio.theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')</script>
 </head>
 <body>
-<div id="app"></div>
+<div id="app">
+  <!-- Текст для поисковиков и браузеров без JavaScript; Vue заменяет его при запуске. -->
+  <main style="max-width:760px;margin:0 auto;padding:48px 16px;font-family:Manrope,system-ui,sans-serif;line-height:1.6;opacity:0;animation:seo-in 0s 1.5s forwards">
+    <style>@keyframes seo-in{to{opacity:1}}</style>
+    <h1>Волонтёрство в Ташкенте — Socio</h1>
+    <p>Socio — платформа волонтёрства и взаимопомощи в Ташкенте. Здесь можно стать волонтёром и помогать соседям в своём районе или бесплатно получить помощь: купить продукты и лекарства, сопроводить пожилого человека, помочь семье с детьми.</p>
+    <h2>Как стать волонтёром</h2>
+    <p>Зарегистрируйтесь как волонтёр — это займёт минуту. Координатор подтвердит профиль, и вы начнёте получать заявки от людей рядом. За каждое выполненное доброе дело начисляются коины, а в Академии Socio можно бесплатно пройти обучение волонтёрству.</p>
+    <ul>
+      <li><a href="/volunteers">Стать волонтёром</a></li>
+      <li><a href="/register/help">Получить помощь</a></li>
+      <li><a href="/categories">Направления помощи</a></li>
+      <li><a href="/register/student">Академия волонтёров для студентов</a></li>
+    </ul>
+  </main>
+</div>
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>

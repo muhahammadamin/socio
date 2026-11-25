@@ -655,3 +655,26 @@ button.row:hover,a.row:hover{background:color-mix(in srgb,var(--accent) 5%,trans
 input,select,textarea{transition:border-color .15s,box-shadow .15s}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* Блок «Волонтёрство в Ташкенте» и частые вопросы на главной */
+.seo .seotext{max-width:760px;color:var(--muted);font-size:16px;line-height:1.7}
+.seo .seotext p{margin:0 0 14px}
+.seo .seotext b{color:var(--ink)}
+.faq{margin-top:22px;max-width:760px}
+.faq h3{font-size:20px;font-weight:800;margin:0 0 12px}
+.faq details{border-radius:14px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);padding:14px 18px;margin-bottom:10px}
+.faq summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font-weight:800;color:var(--muted);transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{margin:10px 0 0;color:var(--muted);line-height:1.6}
+
+/* Переключатель языка */
+.langsw{display:inline-flex;padding:3px;border-radius:999px;background:color-mix(in srgb,var(--ink) 6%,transparent);box-shadow:inset 0 0 0 1px var(--line)}
+.langsw button{border:0;background:none;color:var(--muted);font:inherit;font-size:12px;font-weight:800;letter-spacing:.3px;padding:6px 9px;border-radius:999px;cursor:pointer;transition:background .15s,color .15s}
+.langsw button:hover{color:var(--ink)}
+.langsw button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(20,25,54,.15)}
+@media (max-width:420px){.langsw button{padding:6px 7px}}
+/* узкие экраны: шапка с переключателем языка помещается в ширину телефона */
+@media (max-width:520px){.sitebar .in{gap:8px;padding:10px 16px}.sitebar .logo small{display:none}.sitebar .act{gap:6px}.sitebar .act .btn{padding-inline:12px}}
+@media (max-width:420px){.sitebar .logo strong{display:none}.langsw button{padding:6px 7px;font-size:11.5px}}

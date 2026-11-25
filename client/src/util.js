@@ -1,13 +1,16 @@
 import { DISTRICTS } from '@shared/constants.js';
+import { t } from './i18n.js';
 
 export const MIN = 6e4, HOUR = 36e5, DAY = 864e5;
 
+// Название статуса — геттер, чтобы оно менялось вместе с языком сайта.
+const st = (k, c, p) => ({ get t() { return t(`status.${k}`); }, c, p });
 export const ST = {
-  new: { t: 'Новая', c: 'orange', p: '--p-orange' },
-  assigned: { t: 'Назначена', c: 'teal', p: '--p-teal' },
-  accepted: { t: 'Принята', c: 'purple', p: '--p-purple' },
-  progress: { t: 'В работе', c: 'blue', p: '--p-blue' },
-  done: { t: 'Выполнена', c: 'green', p: '--p-green' },
+  new: st('new', 'orange', '--p-orange'),
+  assigned: st('assigned', 'teal', '--p-teal'),
+  accepted: st('accepted', 'purple', '--p-purple'),
+  progress: st('progress', 'blue', '--p-blue'),
+  done: st('done', 'green', '--p-green'),
 };
 export const STEPT = { new: 'Создана', assigned: 'Назначена', accepted: 'Принята', progress: 'В работе', done: 'Выполнена' };
 export const ORDER = ['new', 'assigned', 'accepted', 'progress', 'done'];
@@ -18,10 +21,10 @@ export function plural(n, f) {
 }
 export function ago(ts) {
   const d = Date.now() - ts;
-  if (d < MIN) return 'только что';
-  if (d < HOUR) return `${Math.floor(d / MIN)} мин назад`;
-  if (d < DAY) return `${Math.floor(d / HOUR)} ч назад`;
-  return `${Math.floor(d / DAY)} дн назад`;
+  if (d < MIN) return t('ago.now');
+  if (d < HOUR) return t('ago.min', { n: Math.floor(d / MIN) });
+  if (d < DAY) return t('ago.h', { n: Math.floor(d / HOUR) });
+  return t('ago.d', { n: Math.floor(d / DAY) });
 }
 const p2 = (n) => String(n).padStart(2, '0');
 export const fdate = (ts) => { const d = new Date(ts); return `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()}`; };

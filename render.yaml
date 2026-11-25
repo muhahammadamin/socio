@@ -12,6 +12,11 @@ services:
     envVars:
       - key: DEMO
         value: "false"
+      # Основной домен (например https://socio-help.uz): canonical, sitemap.xml и 301-переадресация
+      # с www и onrender.com. Задайте в панели Render (Environment) ТОЛЬКО когда домен уже открывается,
+      # иначе onrender.com начнёт переадресовывать на неработающий адрес.
+      - key: SITE_URL
+        sync: false
       - key: ADMIN_PASSWORD
         generateValue: true
       - key: SECRET

@@ -6,6 +6,7 @@ import Icon from '../../components/Icon.vue';
 import SiteBar from '../../components/SiteBar.vue';
 import SignupForm from '../../components/SignupForm.vue';
 import { ROLES } from './roles.js';
+import { t } from '../../i18n.js';
 
 // Шаг 2: отдельная страница регистрации для выбранной роли.
 const route = useRoute();
@@ -20,7 +21,7 @@ const next = computed(() => (route.query.next ? { next: route.query.next } : {})
     <SiteBar />
     <div class="wrap regpage" :style="{ '--c': r.color, '--c2': r.color2 }">
       <aside class="reghero">
-        <RouterLink class="regback" :to="{ path: '/register', query: next }"><Icon name="back" />Выбрать другую роль</RouterLink>
+        <RouterLink class="regback" :to="{ path: '/register', query: next }"><Icon name="back" />{{ t('regform.back') }}</RouterLink>
         <span class="rb-ic"><Icon :name="r.icon" /></span>
         <h1>{{ r.title }}</h1>
         <p>{{ r.lead }}</p>
@@ -31,12 +32,12 @@ const next = computed(() => (route.query.next ? { next: route.query.next } : {})
 
       <section class="card regcard">
         <div class="stepper"><span class="done"><Icon name="check" /></span><i class="on" /><span class="on">2</span></div>
-        <h2>Регистрация</h2>
-        <p class="note" style="margin:4px 0 18px">После регистрации вы сразу попадёте в {{ r.after }}. Уже есть аккаунт? <RouterLink :to="{ path: '/login', query: next }">Войти</RouterLink></p>
+        <h2>{{ t('regform.title') }}</h2>
+        <p class="note" style="margin:4px 0 18px">{{ t('regform.after', { after: r.after }) }} {{ t('common.haveAccount') }} <RouterLink :to="{ path: '/login', query: next }">{{ t('common.login') }}</RouterLink></p>
         <p v-if="loadErr" class="formerr">{{ loadErr }}</p>
         <SignupForm v-else-if="P" :key="route.params.as" :role="r.role" :districts="Object.keys(P.districts)" :categories="P.categories"
           :client-id="P.googleClientId" :submit-label="r.button" />
-        <div v-else class="note">Загрузка…</div>
+        <div v-else class="note">{{ t('common.loading') }}</div>
       </section>
     </div>
   </div>

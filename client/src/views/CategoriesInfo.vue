@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { api } from '../api.js';
 import { HOME } from '../store.js';
 import { siteUser } from '../authflow.js';
+import { t, tm, catT } from '../i18n.js';
 import Icon from '../components/Icon.vue';
 import SiteBar from '../components/SiteBar.vue';
 
@@ -18,17 +19,7 @@ onMounted(() => api.get('/public').then(async (d) => {
 const helpHref = computed(() => { const me = siteUser(); return me?.role === 'user' ? '/app/new' : me ? HOME[me.role] : '/register/help'; });
 const openByCat = (name) => (P.value?.pins || []).filter((p) => p.cat === name).length;
 
-const RULES = [
-  ['heart', 'Помощь бесплатная', 'Волонтёры не берут денег за помощь. Покупки и лекарства оплачивает сам человек — помощник отдаёт чек и сдачу.'],
-  ['phone', 'Экстренные ситуации — не к нам', 'Если угрожает жизнь или здоровье, звоните 103 (скорая), 101 (пожарные) или 102 (полиция). Платформа не заменяет экстренные службы.'],
-  ['shield', 'Проверенные помощники', 'Каждого волонтёра проверяет координатор. Помощник представится и назовёт номер заявки — так вы поймёте, что это он.'],
-  ['clock', 'Сроки', 'Укажите, когда нужна помощь: сегодня, в течение 2–3 дней или на этой неделе. Срочные заявки назначаем в первую очередь.'],
-];
-const STEPS = [
-  ['Выберите категорию', 'Если не уверены — выбирайте «Другое» и опишите ситуацию своими словами.'],
-  ['Опишите, что нужно', 'Что сделать, где и когда. Чем подробнее, тем быстрее подберём помощника.'],
-  ['Дождитесь звонка', 'Координатор назначит помощника из вашего района, он позвонит и договорится о времени.'],
-];
+const RULE_ICONS = ['heart', 'phone', 'shield', 'clock'];
 </script>
 
 <template>
@@ -37,10 +28,10 @@ const STEPS = [
     <section class="lhero cathero">
       <div class="wrap">
         <div>
-          <span class="kicker"><Icon name="grid" :size="15" />Направления помощи</span>
-          <h1>С чем <em>мы помогаем</em></h1>
-          <p>Когда вы оставляете заявку, нужно выбрать категорию. Ниже — что входит в каждую из них, примеры заявок и чего помощники не делают.</p>
-          <div class="ctas"><RouterLink class="btn light lg" :to="helpHref"><Icon name="heart" :size="18" />Оставить заявку</RouterLink></div>
+          <span class="kicker"><Icon name="grid" :size="15" />{{ t('catsPage.kicker') }}</span>
+          <h1>{{ tm('catsPage.h1')[0] }}<em>{{ tm('catsPage.h1')[1] }}</em>{{ tm('catsPage.h1')[2] }}</h1>
+          <p>{{ t('catsPage.lead') }}</p>
+          <div class="ctas"><RouterLink class="btn light lg" :to="helpHref"><Icon name="heart" :size="18" />{{ t('catsPage.cta') }}</RouterLink></div>
         </div>
       </div>
     </section>
@@ -50,27 +41,27 @@ const STEPS = [
         <article v-for="c in P?.categories || []" :key="c.id" :id="`cat-${c.id}`" class="catrow" :style="{ '--c': c.color }">
           <span class="cico"><Icon :name="c.icon" /></span>
           <div class="grow">
-            <div class="cath"><h2>{{ c.name }}</h2><span class="note">{{ openByCat(c.name) ? `открытых заявок: ${openByCat(c.name)}` : '' }}</span></div>
-            <p>{{ c.descr || 'Помощь в повседневных делах.' }}</p>
-            <template v-if="c.examples.length">
-              <b class="exh">Например:</b>
-              <ul class="examples"><li v-for="e in c.examples" :key="e"><Icon name="check" />{{ e }}</li></ul>
+            <div class="cath"><h2>{{ catT(c).name }}</h2><span class="note">{{ openByCat(c.name) ? t('catsPage.open', { n: openByCat(c.name) }) : '' }}</span></div>
+            <p>{{ catT(c).descr || t('catsPage.defaultDescr') }}</p>
+            <template v-if="catT(c).examples.length">
+              <b class="exh">{{ t('catsPage.example') }}</b>
+              <ul class="examples"><li v-for="e in catT(c).examples" :key="e"><Icon name="check" />{{ e }}</li></ul>
             </template>
           </div>
         </article>
       </div>
 
       <section class="section">
-        <h2 class="big">Как выбрать и оформить заявку</h2>
+        <h2 class="big">{{ t('catsPage.howTitle') }}</h2>
         <div class="steps" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-          <div v-for="(s, i) in STEPS" :key="i" class="step"><span class="n">{{ i + 1 }}</span><b>{{ s[0] }}</b><p>{{ s[1] }}</p></div>
+          <div v-for="(s, i) in tm('catsPage.steps')" :key="i" class="step"><span class="n">{{ i + 1 }}</span><b>{{ s[0] }}</b><p>{{ s[1] }}</p></div>
         </div>
       </section>
 
       <section class="section">
-        <h2 class="big">Важно знать</h2>
+        <h2 class="big">{{ t('catsPage.rulesTitle') }}</h2>
         <div class="rules">
-          <div v-for="r in RULES" :key="r[1]" class="rule"><span class="ti"><Icon :name="r[0]" /></span><div><b>{{ r[1] }}</b><p>{{ r[2] }}</p></div></div>
+          <div v-for="(r, i) in tm('catsPage.rules').map((x, j) => [RULE_ICONS[j], ...x])" :key="r[1]" class="rule"><span class="ti"><Icon :name="r[0]" /></span><div><b>{{ r[1] }}</b><p>{{ r[2] }}</p></div></div>
         </div>
       </section>
     </div>
