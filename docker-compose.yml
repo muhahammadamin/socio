@@ -6,7 +6,7 @@ services:
     environment:
       # DEMO: "false" — чистая база без тестовых людей и заявок
       DEMO: "true"
-      ADMIN_PHONE: "+998 90 000-00-00"
+      ADMIN_PHONE: "+998 77-010-25-56"
       ADMIN_PASSWORD: "change-me-please"
     volumes:
       - socio-data:/data

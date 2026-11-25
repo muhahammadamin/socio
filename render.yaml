@@ -17,6 +17,8 @@ services:
       # иначе onrender.com начнёт переадресовывать на неработающий адрес.
       - key: SITE_URL
         sync: false
+      - key: ADMIN_PHONE
+        value: "+998 77-010-25-56"
       - key: ADMIN_PASSWORD
         generateValue: true
       - key: SECRET

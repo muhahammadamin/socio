@@ -18,10 +18,25 @@ async function addUser(u, passHash) {
   )).lastInsertRowid);
 }
 
-/** Создаёт администратора из переменных окружения, если админов ещё нет. */
+export const DEFAULT_ADMIN_PHONE = '+998 77-010-25-56';
+
+/** Создаёт администратора из переменных окружения, если админов ещё нет.
+ *  Если админ уже есть, а ADMIN_PHONE задан и отличается — переносит номер первому админу. */
 export async function ensureAdmin() {
-  if (await one(`SELECT id FROM users WHERE role='admin' LIMIT 1`)) return;
-  const phone = process.env.ADMIN_PHONE || '+998 90 000-00-00';
+  const phone = process.env.ADMIN_PHONE || DEFAULT_ADMIN_PHONE;
+  const admin = await one(`SELECT id, phone_key FROM users WHERE role='admin' ORDER BY id LIMIT 1`);
+  if (admin) {
+    const key = phoneKey(phone);
+    if (process.env.ADMIN_PHONE && admin.phone_key !== key) {
+      if (await one(`SELECT id FROM users WHERE phone_key=? AND id<>?`, key, admin.id)) {
+        console.warn(`[socio] номер ${phone} уже занят другим пользователем — телефон администратора не изменён`);
+      } else {
+        await run(`UPDATE users SET phone=?, phone_key=? WHERE id=?`, phone, key, admin.id);
+        console.log(`[socio] телефон администратора изменён на ${phone}`);
+      }
+    }
+    return;
+  }
   const pass = process.env.ADMIN_PASSWORD || 'admin123';
   await addUser({ role: 'admin', name: 'Администратор', phone }, hashPassword(pass));
   console.log(`[socio] создан администратор ${phone}${process.env.ADMIN_PASSWORD ? '' : ' / admin123 — смените ADMIN_PASSWORD в продакшене'}`);

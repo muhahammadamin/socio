@@ -58,7 +58,7 @@ docker compose up -d --build
 | `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | — | облачная база Turso; без них используется локальный файл |
 | `DATA_DIR` | `./data` | где лежат локальная база и ключ подписи |
 | `DEMO` | `true` | `false` — чистая база без тестовых данных и входа в один клик |
-| `ADMIN_PHONE` / `ADMIN_PASSWORD` | `+998 90 000-00-00` / `admin123` | первый администратор |
+| `ADMIN_PHONE` / `ADMIN_PASSWORD` | `+998 77-010-25-56` / `admin123` | первый администратор |
 | `SECRET` | генерируется | ключ подписи токенов |
 
 ## Структура
