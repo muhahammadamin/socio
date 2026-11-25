@@ -13,6 +13,7 @@ function visitorId() {
 }
 
 export async function countVisit() {
+  if (location.pathname.startsWith('/admin')) return; // панель управления — не посещение сайта
   const id = visitorId();
   if (!id) return;
   try { visitors.value = (await api.post('/visit', { id })).visitors; } catch { /* не мешаем работе сайта */ }

@@ -401,6 +401,28 @@ api.post('/requests/:id/complaint', allow('user'), wrap(async (req) => {
 }));
 
 /* помощники */
+/* ---------- посетители сайта для панели администратора ----------
+   Сутки считаем по времени Ташкента (UTC+5). */
+const TZ = 5 * 36e5, DAYMS = 864e5;
+api.get('/admin/visitors', allow('admin'), wrap(async (req) => {
+  const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
+  const today = Math.floor((Date.now() + TZ) / DAYMS) * DAYMS - TZ; // начало сегодняшнего дня по Ташкенту
+  const from = today - (days - 1) * DAYMS;
+  const cnt = async (sql, ...p) => (await one(sql, ...p)).n;
+  const rows = await all(`SELECT CAST((first_ts - ?) / ${DAYMS} AS INTEGER) k, COUNT(*) n FROM visitors WHERE first_ts >= ? GROUP BY k`, from, from);
+  const perDay = Array(days).fill(0);
+  for (const r of rows) { const k = Math.floor(r.k); if (k >= 0 && k < days) perDay[k] += r.n; }
+  return {
+    total: await visitorCount(),
+    today: await cnt(`SELECT COUNT(*) n FROM visitors WHERE first_ts >= ?`, today),
+    week: await cnt(`SELECT COUNT(*) n FROM visitors WHERE first_ts >= ?`, today - 6 * DAYMS),
+    month: await cnt(`SELECT COUNT(*) n FROM visitors WHERE first_ts >= ?`, today - 29 * DAYMS),
+    activeToday: await cnt(`SELECT COUNT(*) n FROM visitors WHERE last_ts >= ?`, today),
+    returning: await cnt(`SELECT COUNT(*) n FROM visitors WHERE last_ts - first_ts > ?`, DAYMS),
+    days: perDay.map((n, i) => ({ ts: from + i * DAYMS, n })),
+  };
+}));
+
 api.post('/helpers', allow('admin'), wrap(async (req) => {
   const b = req.body || {};
   const name = str(b.name, 2, 80, 'Введите имя помощника.'), ph = phone(b.phone), d = dist(b.dist), sk = skills(b.skills, false);

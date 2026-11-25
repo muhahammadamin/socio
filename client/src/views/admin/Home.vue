@@ -4,6 +4,7 @@ import { S } from '../../store.js';
 import { DAY, ago } from '../../util.js';
 import { useOpenRequest, reqPins } from '../../composables.js';
 import Icon from '../../components/Icon.vue';
+import VisitorsCard from '../../components/VisitorsCard.vue';
 import CityMap from '../../components/CityMap.vue';
 import { Donut } from '../../components/Charts.js';
 import { PageHead, Tile, StatusPill, CatIcon, Legend } from '../../components/ui.js';
@@ -32,6 +33,7 @@ const recent = computed(() => S.reqs.slice(0, 6));
     <Tile color="purple" icon="shield" label="Помощники" :value="S.helpers.length" :sub="availH + ' доступны сейчас'" />
     <Tile color="orange" icon="bell" label="Новые" :value="fresh" :sub="fresh ? 'ждут назначения' : 'все назначены'" />
   </div>
+  <VisitorsCard />
   <div class="grid3">
     <div class="card">
       <div class="ch"><h2>Последние заявки</h2><RouterLink class="link" to="/admin/requests">Все заявки <Icon name="arrow" /></RouterLink></div>
