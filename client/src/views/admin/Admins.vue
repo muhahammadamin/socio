@@ -4,6 +4,7 @@ import { S, act } from '../../store.js';
 import { fdate } from '../../util.js';
 import Icon from '../../components/Icon.vue';
 import { PageHead, Avatar } from '../../components/ui.js';
+import PhoneInput from '../../components/PhoneInput.vue';
 
 // Администраторы панели: добавить нового (пароль задаёт сам или генерируется) и удалить лишнего.
 const f = reactive({ name: '', phone: '', password: '' });
@@ -28,7 +29,7 @@ function remove(a) {
     <div class="ch"><h2>Добавить администратора</h2></div>
     <div class="two" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end">
       <label class="f">Имя<input v-model="f.name" type="text" autocomplete="off" placeholder="Например, Дилноза Каримова"></label>
-      <label class="f">Телефон<input v-model="f.phone" type="tel" autocomplete="off" placeholder="+998 90 000-00-00"></label>
+      <label class="f">Телефон<PhoneInput v-model="f.phone" autocomplete="off" /></label>
       <label class="f">Пароль<input v-model="f.password" type="text" autocomplete="new-password" placeholder="Пусто — придумаем сами"></label>
       <button class="btn" :disabled="busy"><Icon name="plus" />Добавить</button>
     </div>

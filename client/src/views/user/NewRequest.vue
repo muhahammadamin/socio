@@ -6,6 +6,7 @@ import { DISTRICTS, DISTRICT_NAMES, nearestDistrict } from '@shared/constants.js
 import Icon from '../../components/Icon.vue';
 import CityMap from '../../components/CityMap.vue';
 import { PageHead } from '../../components/ui.js';
+import PhoneInput from '../../components/PhoneInput.vue';
 
 const router = useRouter();
 const home = DISTRICTS[S.me.dist] || DISTRICTS[DISTRICT_NAMES[0]];
@@ -50,7 +51,7 @@ async function submit() {
           <label class="f">Когда нужна помощь
             <select v-model.number="f.due"><option :value="1">Сегодня</option><option :value="2">В течение 2 дней</option><option :value="3">В течение 3 дней</option><option :value="7">На этой неделе</option></select>
           </label>
-          <label class="f">Телефон для связи<input v-model="f.phone" type="tel" autocomplete="tel"></label>
+          <label class="f">Телефон для связи<PhoneInput v-model="f.phone" autocomplete="tel" /></label>
         </div>
       </div>
       <div class="fcol">

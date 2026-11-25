@@ -4,6 +4,7 @@ import { S, act } from '../../store.js';
 import Icon from '../../components/Icon.vue';
 import { PageHead, Avatar } from '../../components/ui.js';
 import { SKILLS } from '@shared/constants.js';
+import PhoneInput from '../../components/PhoneInput.vue';
 
 const f = reactive({ name: '', phone: '', dist: Object.keys(S.districts)[0] });
 const issued = ref(null), busy = ref(false);
@@ -24,7 +25,7 @@ const toggle = (h) => act((api) => api.patch(`/helpers/${h.id}`, { avail: !h.ava
     <div class="ch"><h2>Добавить помощника</h2></div>
     <div class="two" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end">
       <label class="f">Имя<input v-model="f.name" type="text" autocomplete="off" placeholder="Например, Фарход Рашидов"></label>
-      <label class="f">Телефон<input v-model="f.phone" type="tel" placeholder="+998 90 000-00-00"></label>
+      <label class="f">Телефон<PhoneInput v-model="f.phone" /></label>
       <label class="f">Район<select v-model="f.dist"><option v-for="d in Object.keys(S.districts)" :key="d">{{ d }}</option></select></label>
       <button class="btn" :disabled="busy"><Icon name="plus" />Добавить</button>
     </div>

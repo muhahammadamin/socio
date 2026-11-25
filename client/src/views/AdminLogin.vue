@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { S, signIn, load, signOut } from '../store.js';
 import Icon from '../components/Icon.vue';
 import { Logo } from '../components/ui.js';
+import PhoneInput from '../components/PhoneInput.vue';
 
 // Отдельный вход в панель управления: без шапки сайта и без ссылок на него.
 const route = useRoute(), router = useRouter();
@@ -33,7 +34,7 @@ async function submit() {
       <div class="logo"><Logo /><div><strong>Socio</strong><small>Панель управления</small></div></div>
       <h1><Icon name="lock" />Вход для администраторов</h1>
       <p class="sub">Доступ только для координаторов платформы.</p>
-      <label class="f">Телефон<input v-model="f.phone" type="tel" autocomplete="username" placeholder="+998 90 000-00-00"></label>
+      <label class="f">Телефон<PhoneInput v-model="f.phone" autocomplete="username" /></label>
       <label class="f">Пароль<input v-model="f.password" type="password" autocomplete="current-password"></label>
       <p v-if="err" class="formerr" role="alert">{{ err }}</p>
       <button class="btn lg" :disabled="busy">Войти в панель</button>

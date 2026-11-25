@@ -9,6 +9,7 @@ import SignupForm from '../components/SignupForm.vue';
 import GoogleButton from '../components/GoogleButton.vue';
 import { ROLES } from './register/roles.js';
 import { t, tm } from '../i18n.js';
+import PhoneInput from '../components/PhoneInput.vue';
 
 // Вход. Регистрация — на отдельных страницах (/register → выбор роли).
 const route = useRoute(), router = useRouter();
@@ -63,7 +64,7 @@ const onGoogle = (credential) => run(async () => {
             <h1>{{ t('auth.title') }}</h1>
             <p class="sub">{{ t('auth.sub') }}</p>
             <form novalidate @submit.prevent="submit">
-              <label class="f">{{ t('signup.phone') }}<input v-model="f.phone" type="tel" autocomplete="tel" placeholder="+998 90 123-45-67"></label>
+              <label class="f">{{ t('signup.phone') }}<PhoneInput v-model="f.phone" autocomplete="tel" /></label>
               <label class="f">{{ t('signup.password') }}<input v-model="f.password" type="password" autocomplete="current-password"></label>
               <p v-if="err" class="formerr" role="alert">{{ err }}</p>
               <button class="btn lg" :disabled="busy">{{ t('common.login') }}</button>

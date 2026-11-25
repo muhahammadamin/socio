@@ -33,18 +33,20 @@ export async function deleteUser(id) {
 
 export const DEFAULT_ADMIN_PHONE = '+998 77-010-25-56';
 
-/** Номера, убранные с сайта: аккаунты и заявки с ними удаляются при запуске, а зарегистрироваться с ними нельзя. */
-export const REMOVED_PHONES = ['+998 77-006-73-24'];
-export const isRemovedPhone = (p) => REMOVED_PHONES.some((r) => phoneKey(r) === phoneKey(p));
+/** Освобождённые номера: аккаунты и заявки с ними, созданные до REMOVED_BEFORE, удаляются при запуске.
+ *  После этого номер свободен — с ним можно зарегистрироваться заново, новый аккаунт не трогается. */
+const REMOVED_PHONES = ['+998 77-006-73-24'];
+const REMOVED_BEFORE = Date.parse('2026-11-25T15:20:00Z');
+const isRemovedPhone = (p) => REMOVED_PHONES.some((r) => phoneKey(r) === phoneKey(p));
 
 async function purgeRemovedPhones() {
   const keys = REMOVED_PHONES.map(phoneKey);
-  for (const u of await all(`SELECT id, role, name, phone_key FROM users WHERE phone_key IN (${keys.map(() => '?').join(',')})`, ...keys)) {
+  for (const u of await all(`SELECT id, role, name, phone_key FROM users WHERE created_at < ? AND phone_key IN (${keys.map(() => '?').join(',')})`, REMOVED_BEFORE, ...keys)) {
     if (u.phone_key === phoneKey(process.env.ADMIN_PHONE || DEFAULT_ADMIN_PHONE)) continue; // главного администратора не трогаем
     await tx(() => deleteUser(u.id));
-    console.log(`[socio] удалён аккаунт «${u.name}» (#${u.id}, ${u.role}) с убранным номером`);
+    console.log(`[socio] удалён аккаунт «${u.name}» (#${u.id}, ${u.role}), номер ${u.phone_key} освобождён`);
   }
-  for (const v of await all('SELECT id, phone FROM volunteers')) if (isRemovedPhone(v.phone)) await run('DELETE FROM volunteers WHERE id=?', v.id);
+  for (const v of await all('SELECT id, phone FROM volunteers WHERE created_at < ?', REMOVED_BEFORE)) if (isRemovedPhone(v.phone)) await run('DELETE FROM volunteers WHERE id=?', v.id);
 }
 
 /** Создаёт администратора из переменных окружения, если админов ещё нет.

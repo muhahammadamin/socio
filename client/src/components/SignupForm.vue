@@ -8,6 +8,8 @@ import { firstSource } from '../visit.js';
 import { t, tm, catT } from '../i18n.js';
 import Icon from './Icon.vue';
 import GoogleButton from './GoogleButton.vue';
+import PhoneInput from './PhoneInput.vue';
+import { isValidPhone } from '@shared/constants.js';
 
 // Одна форма регистрации для всех ролей: «нужна помощь» (user), студент (student), волонтёр (helper).
 // Поля проверяются сразу в браузере — ошибка показывается под нужным полем.
@@ -29,19 +31,11 @@ const clr = (k) => { delete E[k]; };
 
 const toggle = (list, v) => { f[list] = f[list].includes(v) ? f[list].filter((x) => x !== v) : [...f[list], v]; delete E[list]; };
 
-/* телефон: принимаем любые цифры и приводим к виду +998 90 123-45-67 */
-function formatPhone() {
-  let d = f.phone.replace(/\D/g, '');
-  if (d.length === 9) d = '998' + d;
-  if (d.length === 12 && d.startsWith('998')) f.phone = `+998 ${d.slice(3, 5)} ${d.slice(5, 8)}-${d.slice(8, 10)}-${d.slice(10)}`;
-}
-
 function validate() {
   for (const k of Object.keys(E)) delete E[k];
   general.value = '';
   if (f.name.trim().length < 2) E.name = t('signup.err.name');
-  const digits = f.phone.replace(/\D/g, '');
-  if (digits.length < 9 || digits.length > 15) E.phone = t('signup.err.phone');
+  if (!isValidPhone(f.phone)) E.phone = t('signup.err.phone');
   if (!g.value && f.password.length < 6) E.password = t('signup.err.password');
   if (props.role === 'student' && f.school.trim().length < 2) E.school = t('signup.err.school');
   if (props.role === 'user' && props.categories.length && !f.needs.length) E.needs = t('signup.err.needs');
@@ -65,7 +59,6 @@ async function finish(res) {
   await enter(res, router, route.query.next, props.redirect);
 }
 async function submit() {
-  formatPhone();
   if (!validate()) { general.value = t('signup.err.check'); return; }
   busy.value = true;
   try {
@@ -104,7 +97,7 @@ const label = computed(() => (g.value ? t('signup.finish') : props.submitLabel |
 
     <div class="two">
       <label class="f" :class="{ bad: E.phone }">{{ t('signup.phone') }}
-        <input v-model="f.phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+998 90 123-45-67" :aria-invalid="!!E.phone" @input="clr('phone')" @blur="formatPhone">
+        <PhoneInput v-model="f.phone" autocomplete="tel" :aria-invalid="!!E.phone" @input="clr('phone')" />
         <span v-if="E.phone" class="ferr">{{ E.phone }}</span>
       </label>
       <label class="f">{{ t('signup.district') }}<select v-model="f.dist"><option v-for="d in districts" :key="d">{{ d }}</option></select></label>

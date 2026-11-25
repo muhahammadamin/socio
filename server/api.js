@@ -3,11 +3,11 @@ import crypto from 'node:crypto';
 import { one, all, run, tx } from './db.js';
 import { authenticate, allow, checkPassword, hashPassword, makeToken, readToken, loginLimiter, countFailure, makeTicket, readTicket, verifyGoogle } from './auth.js';
 import { subscribe, changed, changedAll, notify, notifyAdmins } from './events.js';
-import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser, isRemovedPhone } from './seed.js';
+import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser } from './seed.js';
 import { classifySource, ownHosts } from './source.js';
 import { publicLearnRoutes, adminLearnRoutes } from './learn.js';
 import { addCoins, rewardRoutes } from './coins.js';
-import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, nearestDistrict, phoneKey } from '../shared/constants.js';
+import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, nearestDistrict, phoneKey, formatPhone, isValidPhone } from '../shared/constants.js';
 
 export const api = express.Router();
 api.use(express.json({ limit: '32kb' }));
@@ -15,7 +15,12 @@ api.use(express.json({ limit: '32kb' }));
 /* ---------- валидация ---------- */
 class Bad extends Error { constructor(m, s = 400) { super(m); this.status = s; } }
 const str = (v, min, max, msg) => { const s = String(v ?? '').trim(); if (s.length < min || s.length > max) throw new Bad(msg); return s; };
-const phone = (v) => { const s = String(v ?? '').trim(); const k = phoneKey(s); if (k.length < 9 || k.length > 15) throw new Bad('Введите телефон с кодом, например +998 90 123-45-67.'); if (isRemovedPhone(s)) throw new Bad('Этот номер нельзя использовать на сайте. Укажите другой.'); return s; };
+// Телефон: только настоящий номер Узбекистана; сохраняется в одном виде +998 90 123 45 67.
+const phone = (v) => {
+  const d = phoneKey(v), full = d.length === 9 ? `998${d}` : d; // 9 цифр без кода страны тоже принимаем
+  if (full.length !== 12 || !full.startsWith('998') || !isValidPhone(`+${full}`)) throw new Bad('Введите настоящий номер телефона: +998 и 9 цифр, например +998 90 123 45 67.');
+  return formatPhone(`+${full}`);
+};
 const dist = (v) => { if (!DISTRICT_NAMES.includes(v)) throw new Bad('Выберите район из списка.'); return v; };
 const password = (v) => str(v, 6, 100, 'Пароль — не короче 6 символов.');
 const skills = (v, required = true) => {

@@ -150,7 +150,7 @@ export default {
     show: 'Show', hide: 'Hide', showAria: 'Show password', hideAria: 'Hide password',
     err: {
       name: 'Enter your first and last name.',
-      phone: 'Enter a phone number, e.g. +998 90 123-45-67.',
+      phone: 'Enter a real phone number: +998 and 9 digits, e.g. +998 90 123 45 67.',
       password: 'Password must be at least 6 characters.',
       school: 'Tell us where you study.',
       needs: 'Select at least one area.',

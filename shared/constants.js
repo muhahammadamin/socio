@@ -59,6 +59,21 @@ export function nearestDistrict(x, y) {
 
 export const phoneKey = (p) => String(p ?? '').replace(/\D/g, '');
 
+/* Телефоны Узбекистана: +998 и 9 цифр — код оператора/города (2) и номер (7), вид +998 90 123 45 67. */
+export const PHONE_CODES = ['20', '33', '50', '55', '61', '62', '65', '66', '67', '69', '70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '88', '90', '91', '93', '94', '95', '97', '98', '99'];
+/** 9 цифр номера после +998 (лишнее отрезается). */
+export function phoneLocal(p) {
+  const v = String(p ?? ''), d = phoneKey(v);
+  return (d.startsWith('998') && (d.length > 9 || v.trim().startsWith('+')) ? d.slice(3) : d).slice(0, 9);
+}
+/** Вид +998 90 123 45 67; для неполного номера — сколько набрано. */
+export function formatPhone(p) {
+  const d = phoneLocal(p);
+  return ['+998', d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' ');
+}
+/** Номер настоящий: ровно 9 цифр после +998 и существующий код оператора или города. */
+export const isValidPhone = (p) => { const d = phoneLocal(p); return d.length === 9 && PHONE_CODES.includes(d.slice(0, 2)); };
+
 /** Откуда человек пришёл на сайт. Свои метки из ссылок (?ref=blogger) показываются как есть. */
 export const SOURCES = {
   telegram: { t: 'Telegram', color: '#229ed9' },

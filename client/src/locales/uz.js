@@ -151,7 +151,7 @@ export default {
     show: 'Koʻrsatish', hide: 'Yashirish', showAria: 'Parolni koʻrsatish', hideAria: 'Parolni yashirish',
     err: {
       name: 'Ism va familiyangizni kiriting.',
-      phone: 'Telefon raqamini kiriting, masalan +998 90 123-45-67.',
+      phone: 'Haqiqiy raqamni kiriting: +998 va 9 ta raqam, masalan +998 90 123 45 67.',
       password: 'Parol kamida 6 ta belgidan iborat boʻlsin.',
       school: 'Qayerda oʻqishingizni koʻrsating.',
       needs: 'Kamida bitta sohani belgilang.',
