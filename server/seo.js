@@ -138,7 +138,11 @@ export function renderHead(html, req) {
     .replace('</head>', `${tags.join('\n')}\n</head>`);
 }
 
+// IndexNow (Яндекс, Bing): ключ публичный по протоколу — файл с ним доказывает, что сайт наш.
+export const INDEXNOW_KEY = process.env.INDEXNOW_KEY || 'f3a22d28e3a9384d1bc25e5f53cd3884';
+
 export function seoRoutes(app) {
+  app.get(`/${INDEXNOW_KEY}.txt`, (req, res) => res.type('text/plain').send(INDEXNOW_KEY));
   app.get('/robots.txt', (req, res) => {
     const base = siteUrl(req);
     res.type('text/plain').set('Cache-Control', 'public, max-age=3600').send(
