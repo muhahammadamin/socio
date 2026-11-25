@@ -33,6 +33,20 @@ export async function deleteUser(id) {
 
 export const DEFAULT_ADMIN_PHONE = '+998 77-010-25-56';
 
+/** Номера, убранные с сайта: аккаунты и заявки с ними удаляются при запуске, а зарегистрироваться с ними нельзя. */
+export const REMOVED_PHONES = ['+998 77-006-73-24'];
+export const isRemovedPhone = (p) => REMOVED_PHONES.some((r) => phoneKey(r) === phoneKey(p));
+
+async function purgeRemovedPhones() {
+  const keys = REMOVED_PHONES.map(phoneKey);
+  for (const u of await all(`SELECT id, role, name, phone_key FROM users WHERE phone_key IN (${keys.map(() => '?').join(',')})`, ...keys)) {
+    if (u.phone_key === phoneKey(process.env.ADMIN_PHONE || DEFAULT_ADMIN_PHONE)) continue; // главного администратора не трогаем
+    await tx(() => deleteUser(u.id));
+    console.log(`[socio] удалён аккаунт «${u.name}» (#${u.id}, ${u.role}) с убранным номером`);
+  }
+  for (const v of await all('SELECT id, phone FROM volunteers')) if (isRemovedPhone(v.phone)) await run('DELETE FROM volunteers WHERE id=?', v.id);
+}
+
 /** Создаёт администратора из переменных окружения, если админов ещё нет.
  *  Если админ уже есть, а ADMIN_PHONE задан и отличается — переносит номер первому админу. */
 export async function ensureAdmin() {
@@ -212,6 +226,7 @@ export const isDemo = () => !['0', 'false', 'no'].includes(String(process.env.DE
 export async function initData() {
   const empty = !(await one('SELECT id FROM users LIMIT 1'));
   if (empty && isDemo()) { await seedDemo(); console.log('[socio] загружены демо-данные'); }
+  await purgeRemovedPhones();
   await ensureAdmin();
   await ensureCategories();
   await ensureCourses();

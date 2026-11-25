@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { one, all, run, tx } from './db.js';
 import { authenticate, allow, checkPassword, hashPassword, makeToken, readToken, loginLimiter, countFailure, makeTicket, readTicket, verifyGoogle } from './auth.js';
 import { subscribe, changed, changedAll, notify, notifyAdmins } from './events.js';
-import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser } from './seed.js';
+import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser, isRemovedPhone } from './seed.js';
 import { classifySource, ownHosts } from './source.js';
 import { publicLearnRoutes, adminLearnRoutes } from './learn.js';
 import { addCoins, rewardRoutes } from './coins.js';
@@ -15,7 +15,7 @@ api.use(express.json({ limit: '32kb' }));
 /* ---------- валидация ---------- */
 class Bad extends Error { constructor(m, s = 400) { super(m); this.status = s; } }
 const str = (v, min, max, msg) => { const s = String(v ?? '').trim(); if (s.length < min || s.length > max) throw new Bad(msg); return s; };
-const phone = (v) => { const s = String(v ?? '').trim(); const k = phoneKey(s); if (k.length < 9 || k.length > 15) throw new Bad('Введите телефон с кодом, например +998 90 123-45-67.'); return s; };
+const phone = (v) => { const s = String(v ?? '').trim(); const k = phoneKey(s); if (k.length < 9 || k.length > 15) throw new Bad('Введите телефон с кодом, например +998 90 123-45-67.'); if (isRemovedPhone(s)) throw new Bad('Этот номер нельзя использовать на сайте. Укажите другой.'); return s; };
 const dist = (v) => { if (!DISTRICT_NAMES.includes(v)) throw new Bad('Выберите район из списка.'); return v; };
 const password = (v) => str(v, 6, 100, 'Пароль — не короче 6 символов.');
 const skills = (v, required = true) => {
