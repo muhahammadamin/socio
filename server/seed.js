@@ -18,6 +18,19 @@ async function addUser(u, passHash) {
   )).lastInsertRowid);
 }
 
+/** Удаляет пользователя вместе с его заявками, уведомлениями, прогрессом и коинами (не полагаясь на ON DELETE). */
+async function deleteUser(id) {
+  await run('DELETE FROM request_log WHERE req_id IN (SELECT id FROM requests WHERE user_id=?)', id);
+  await run('UPDATE complaints SET req_id=NULL WHERE req_id IN (SELECT id FROM requests WHERE user_id=?)', id);
+  await run('DELETE FROM requests WHERE user_id=?', id);
+  await run('UPDATE requests SET helper_id=NULL WHERE helper_id=?', id);
+  await run('UPDATE complaints SET from_id=NULL WHERE from_id=?', id);
+  await run('UPDATE complaints SET against_id=NULL WHERE against_id=?', id);
+  await run('UPDATE reward_codes SET user_id=NULL WHERE user_id=?', id);
+  for (const t of ['notifications', 'learn_progress', 'coin_log']) await run(`DELETE FROM ${t} WHERE user_id=?`, id);
+  await run('DELETE FROM users WHERE id=?', id);
+}
+
 export const DEFAULT_ADMIN_PHONE = '+998 77-010-25-56';
 
 /** Создаёт администратора из переменных окружения, если админов ещё нет.
@@ -28,12 +41,19 @@ export async function ensureAdmin() {
   if (admin) {
     const key = phoneKey(phone);
     if (process.env.ADMIN_PHONE && admin.phone_key !== key) {
-      if (await one(`SELECT id FROM users WHERE phone_key=? AND id<>?`, key, admin.id)) {
+      const other = await one(`SELECT id, role, name FROM users WHERE phone_key=? AND id<>?`, key, admin.id);
+      // Номер по умолчанию закреплён за администратором: обычный аккаунт с ним удаляется.
+      // Любой другой занятый номер не трогаем — только предупреждение.
+      if (other && (other.role === 'admin' || key !== phoneKey(DEFAULT_ADMIN_PHONE))) {
         console.warn(`[socio] номер ${phone} уже занят другим пользователем — телефон администратора не изменён`);
-      } else {
-        await run(`UPDATE users SET phone=?, phone_key=? WHERE id=?`, phone, key, admin.id);
-        console.log(`[socio] телефон администратора изменён на ${phone}`);
+        return;
       }
+      await tx(async () => {
+        if (other) await deleteUser(other.id);
+        await run(`UPDATE users SET phone=?, phone_key=? WHERE id=?`, phone, key, admin.id);
+      });
+      if (other) console.log(`[socio] удалён аккаунт «${other.name}» (#${other.id}, ${other.role}), занимавший номер администратора`);
+      console.log(`[socio] телефон администратора изменён на ${phone}`);
     }
     return;
   }
