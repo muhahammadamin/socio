@@ -239,12 +239,20 @@ await addCol('reward_codes', 'done_at', 'INTEGER');
 if (/phone_key\s+TEXT\s+NOT NULL\s+UNIQUE/i.test((await one(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`)).sql)) {
   const fresh = usersTable('users_new').match(/^\s{2}([a-z_]+)\s/gm).map((x) => x.trim());
   const cols = (await all('PRAGMA table_info(users)')).map((c) => c.name).filter((c) => fresh.includes(c)).join(',');
-  await db.executeMultiple(`PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON; BEGIN;
-    DROP TABLE IF EXISTS users_new;
-    ${usersTable('users_new')}
-    INSERT INTO users_new (${cols}) SELECT ${cols} FROM users; DROP TABLE users; ALTER TABLE users_new RENAME TO users;
-    COMMIT; PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;`);
-  console.log('[socio] номер телефона теперь уникален в пределах роли');
+  // Если пересоздать таблицу не получилось (например, ограничения облачной базы), сайт всё равно запускается:
+  // ошибка пишется в лог, а номер пока остаётся уникальным на весь сайт.
+  try {
+    await db.executeMultiple(`PRAGMA foreign_keys = OFF; BEGIN;
+      DROP TABLE IF EXISTS users_new;
+      ${usersTable('users_new')}
+      INSERT INTO users_new (${cols}) SELECT ${cols} FROM users; DROP TABLE users; ALTER TABLE users_new RENAME TO users;
+      COMMIT; PRAGMA foreign_keys = ON;`);
+    console.log('[socio] номер телефона теперь уникален в пределах роли');
+  } catch (e) {
+    try { await db.execute('ROLLBACK'); } catch { /* транзакции уже нет */ }
+    try { await db.execute('PRAGMA foreign_keys = ON'); } catch { /* не страшно */ }
+    console.error('[socio] МИГРАЦИЯ users НЕ ВЫПОЛНЕНА — один номер пока нельзя использовать в нескольких ролях:', e.message);
+  }
 }
 // Google-аккаунт тоже можно привязать к аккаунту в каждой роли
 await db.execute('DROP INDEX IF EXISTS idx_users_google');
