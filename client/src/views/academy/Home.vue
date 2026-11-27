@@ -18,7 +18,8 @@ const finished = computed(() => L.courses.filter((c) => c.items.length && doneCo
 
 const count = (c, type) => c.items.filter((it) => it.type === type).length;
 const contents = (c) => [
-  [count(c, 'video'), ['урок', 'урока', 'уроков']],
+  [count(c, 'lesson'), ['урок', 'урока', 'уроков']],
+  [count(c, 'video'), ['видео', 'видео', 'видео']],
   [count(c, 'quiz'), ['тест', 'теста', 'тестов']],
   [count(c, 'game'), ['игра', 'игры', 'игр']],
 ].filter(([n]) => n).map(([n, f]) => plural(n, f)).join(' · ');
@@ -34,7 +35,7 @@ const thumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
         <div>
           <span class="kicker"><Icon name="book" :size="15" />Платформа для студентов</span>
           <h1>Учитесь <em>помогать</em> правильно</h1>
-          <p>Короткие видео, курсы, тесты и игры: первая помощь, общение с пожилыми, защита от мошенников. За каждый пройденный курс — {{ COINS.courseDone }} коинов, их можно обменять на сертификат волонтёра, пополнение связи и мерч.</p>
+          <p>Уроки, короткие видео, курсы, тесты и игры: первая помощь, общение с пожилыми, защита от мошенников. За каждый пройденный курс — {{ COINS.courseDone }} коинов, их можно обменять на сертификат волонтёра, пополнение связи и мерч.</p>
           <div class="ctas">
             <RouterLink class="btn light lg" to="/academy/shorts"><Icon name="play" :size="18" />Смотреть короткие видео</RouterLink>
             <RouterLink v-if="!me" class="btn ghost lg" to="/register/student">Зарегистрироваться</RouterLink>
@@ -74,7 +75,7 @@ const thumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
       <h2 class="sech">Курсы</h2>
       <div class="learngrid" style="margin-top:0">
         <div class="courses">
-          <RouterLink v-for="c in L.courses" :key="c.id" class="course" :to="`/academy/course/${c.id}`" :style="{ '--c': c.color }">
+          <RouterLink v-for="(c, i) in L.courses" :key="c.id" v-reveal="i % 3" class="course" :to="`/academy/course/${c.id}`" :style="{ '--c': c.color }">
             <div class="ctop">
               <span class="cico"><Icon :name="c.icon" /></span>
               <span v-if="c.items.length && doneCount(c) === c.items.length" class="pill green">Пройден</span>
@@ -95,6 +96,7 @@ const thumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
           <p v-else class="note">Пройдите первый урок — и окажетесь здесь.</p>
           <div class="howpts">
             <b>Как начисляются баллы</b>
+            <span><Icon name="book" />Урок — {{ L.points.lesson ?? 5 }}</span>
             <span><Icon name="play" />Видеоурок — {{ L.points.video }}</span>
             <span><Icon name="quiz" />Тест — до {{ L.points.quiz }}</span>
             <span><Icon name="game" />Игра — до {{ L.points.game }}</span>

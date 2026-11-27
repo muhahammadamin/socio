@@ -30,6 +30,8 @@ const onDoc = (e) => { if (menu.value && !menuEl.value?.contains(e.target)) menu
 onMounted(() => document.addEventListener('click', onDoc));
 onBeforeUnmount(() => document.removeEventListener('click', onDoc));
 function logout() { signOut(); router.push('/'); }
+// Другая роль с тем же номером (например, волонтёр и студент) — выходим и открываем вход с уже введённым номером.
+function switchAccount() { sessionStorage.setItem('socio.phone', S.me.phone); signOut(); router.push('/login'); }
 </script>
 
 <template>
@@ -56,6 +58,7 @@ function logout() { signOut(); router.push('/'); }
           <div v-if="menu" class="rdrop" role="menu" @click="menu = false">
             <RouterLink role="menuitem" :to="`${home}/profile`"><Icon name="user" />Профиль</RouterLink>
             <RouterLink role="menuitem" :to="`${home}/notifications`"><Icon name="bell" />Уведомления</RouterLink>
+            <button role="menuitem" type="button" @click="switchAccount"><Icon name="users" />Другой аккаунт</button>
             <button role="menuitem" type="button" @click="logout"><Icon name="logout" />Выйти</button>
           </div>
         </div>

@@ -71,8 +71,8 @@ async function onGoogle(credential) {
   busy.value = true;
   general.value = '';
   try {
-    const r = await api.post('/auth/google', { credential });
-    if (r.token) return await finish(r); // уже зарегистрирован — просто входим
+    const r = await api.post('/auth/google', { credential, role: props.role });
+    if (r.token) return await finish(r); // уже есть аккаунт в этой роли — просто входим
     g.value = r;
     if (!f.name) f.name = r.name;
   } catch (e) { general.value = e.message; }

@@ -5,18 +5,20 @@ import { api } from './api.js';
 const GUEST_KEY = 'socio.learn.guest';
 export const PASS = 0.7; // материал считается пройденным от 70%
 
-export const L = reactive({ courses: [], shorts: [], progress: {}, leaders: [], points: { video: 5, quiz: 10, game: 10 }, guest: true, loaded: false });
+export const L = reactive({ courses: [], shorts: [], progress: {}, leaders: [], points: { lesson: 5, video: 5, quiz: 10, game: 10 }, days: [], guest: true, loaded: false });
 
 const readGuest = () => { try { return JSON.parse(localStorage.getItem(GUEST_KEY)) || {}; } catch { return {}; } };
 const writeGuest = () => { try { localStorage.setItem(GUEST_KEY, JSON.stringify(L.progress)); } catch { /* приватный режим */ } };
 
 export async function loadLearn() {
   const d = await api.get('/learn');
-  Object.assign(L, { courses: d.courses, shorts: d.shorts || [], leaders: d.leaders, points: d.points, guest: !d.progress, progress: d.progress || readGuest(), loaded: true });
+  Object.assign(L, { courses: d.courses, shorts: d.shorts || [], leaders: d.leaders, points: d.points, days: d.days || [], guest: !d.progress, progress: d.progress || readGuest(), loaded: true });
 }
 const refreshLeaders = () => api.get('/learn').then((d) => { L.leaders = d.leaders; }).catch(() => {});
 
+const today = () => Math.floor((Date.now() + 5 * 36e5) / 864e5); // день по Ташкенту
 function setLocal(cid, iid, score) {
+  if (!L.days.includes(today())) L.days = [today(), ...L.days];
   const c = (L.progress[cid] ||= {});
   c[iid] = Math.max(c[iid] || 0, score);
   if (L.guest) writeGuest();
@@ -51,7 +53,35 @@ export function levelOf(points) {
   return { name: LEVELS[i][1], next: next ? { at: next[0], name: next[1] } : null, from: LEVELS[i][0] };
 }
 
+/** Сколько дней подряд человек учится (сегодня или вчера — серия не прервана). */
+export function streak() {
+  const set = new Set(L.days);
+  let d = today();
+  if (!set.has(d)) d -= 1;
+  let n = 0;
+  while (set.has(d)) { n++; d--; }
+  return n;
+}
+export const learnedToday = () => L.days.includes(today());
+
+/** Достижения считаются по прогрессу — без отдельного хранения. */
+export function achievements() {
+  const items = L.courses.flatMap((c) => c.items.map((it) => ({ c, it, s: scoreOf(c.id, it.id) })));
+  const done = items.filter((x) => (x.s ?? 0) >= PASS);
+  const full = L.courses.filter((c) => c.items.length && doneCount(c) === c.items.length).length;
+  return [
+    { id: 'first', icon: 'star', t: 'Первый шаг', d: 'Пройти первый материал', on: done.length >= 1 },
+    { id: 'reader', icon: 'book', t: 'Читатель', d: 'Прочитать 3 урока', on: done.filter((x) => x.it.type === 'lesson').length >= 3 },
+    { id: 'perfect', icon: 'quiz', t: 'Отличник', d: 'Тест на 100%', on: items.some((x) => x.it.type === 'quiz' && x.s === 1) },
+    { id: 'gamer', icon: 'game', t: 'Игрок', d: 'Пройти 3 игры', on: done.filter((x) => x.it.type === 'game').length >= 3 },
+    { id: 'course', icon: 'trophy', t: 'Выпускник', d: 'Пройти курс целиком', on: full >= 1 },
+    { id: 'streak', icon: 'heart', t: 'Три дня подряд', d: 'Учиться 3 дня подряд', on: streak() >= 3 },
+    { id: 'all', icon: 'shield', t: 'Наставник', d: 'Пройти все курсы', on: L.courses.length > 0 && full === L.courses.length },
+  ];
+}
+
 export const TYPE = {
+  lesson: { icon: 'book', label: 'Урок' },
   video: { icon: 'play', label: 'Видеоурок' },
   quiz: { icon: 'quiz', label: 'Тест' },
   game: { icon: 'game', label: 'Игра' },

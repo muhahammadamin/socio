@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS ${name} (
   role        TEXT    NOT NULL CHECK (role IN ('admin','helper','user','student')),
   name        TEXT    NOT NULL,
   phone       TEXT    NOT NULL,
-  phone_key   TEXT    NOT NULL UNIQUE,
+  phone_key   TEXT    NOT NULL,
   pass        TEXT    NOT NULL,
   dist        TEXT    NOT NULL DEFAULT '',
   avail       INTEGER NOT NULL DEFAULT 1,
@@ -63,7 +63,11 @@ CREATE TABLE IF NOT EXISTS ${name} (
   email       TEXT    NOT NULL DEFAULT '',
   verified    INTEGER NOT NULL DEFAULT 1,
   needs       TEXT    NOT NULL DEFAULT '[]',
-  created_at  INTEGER NOT NULL
+  source        TEXT,
+  source_detail TEXT    NOT NULL DEFAULT '',
+  created_at  INTEGER NOT NULL,
+  -- один номер может иметь по аккаунту в каждой роли (нужна помощь, волонтёр, студент, администратор)
+  UNIQUE (phone_key, role)
 );`;
 
 if (!REMOTE) await db.execute('PRAGMA journal_mode = WAL');
@@ -231,4 +235,17 @@ await addCol('rewards', 'icon', `TEXT NOT NULL DEFAULT 'gift'`);
 await addCol('reward_codes', 'status', `TEXT NOT NULL DEFAULT 'done'`); // pending — ждёт выдачи координатором
 await addCol('reward_codes', 'note', `TEXT NOT NULL DEFAULT ''`);
 await addCol('reward_codes', 'done_at', 'INTEGER');
-await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google ON users(google_sub) WHERE google_sub IS NOT NULL');
+// Раньше номер был уникален на весь сайт. Теперь — в пределах роли: пересоздаём таблицу без старого ограничения.
+if (/phone_key\s+TEXT\s+NOT NULL\s+UNIQUE/i.test((await one(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`)).sql)) {
+  const fresh = usersTable('users_new').match(/^\s{2}([a-z_]+)\s/gm).map((x) => x.trim());
+  const cols = (await all('PRAGMA table_info(users)')).map((c) => c.name).filter((c) => fresh.includes(c)).join(',');
+  await db.executeMultiple(`PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON; BEGIN;
+    DROP TABLE IF EXISTS users_new;
+    ${usersTable('users_new')}
+    INSERT INTO users_new (${cols}) SELECT ${cols} FROM users; DROP TABLE users; ALTER TABLE users_new RENAME TO users;
+    COMMIT; PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;`);
+  console.log('[socio] номер телефона теперь уникален в пределах роли');
+}
+// Google-аккаунт тоже можно привязать к аккаунту в каждой роли
+await db.execute('DROP INDEX IF EXISTS idx_users_google');
+await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_role ON users(google_sub, role) WHERE google_sub IS NOT NULL');

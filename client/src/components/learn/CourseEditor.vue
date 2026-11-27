@@ -16,6 +16,8 @@ const PAIR_SEP = /\s+[—–-]\s+|\s*=\s*/;
 
 function toEdit(it) {
   const base = { _k: key(), _open: false, id: it.id, type: it.type, kind: it.kind, title: it.title };
+  if (it.type === 'lesson') return { ...base, body: it.body || '', minutes: it.minutes || '', key: (it.key || []).join('\n'),
+    cq: it.check?.q || '', copts: (it.check?.options || []).join('\n'), cans: it.check?.answer ?? 0, cexp: it.check?.explain || '' };
   if (it.type === 'video') return { ...base, video: it.video ? `https://youtu.be/${it.video}` : '', text: it.text || '' };
   if (it.type === 'quiz') return { ...base, questions: it.questions.map((q) => ({ _k: key(), q: q.q, options: q.options.join('\n'), answer: q.answer, explain: q.explain || '' })) };
   if (it.kind === 'match') return { ...base, pairs: it.pairs.map((p) => p.join(' — ')).join('\n') };
@@ -24,6 +26,8 @@ function toEdit(it) {
 const lines = (s) => String(s || '').split('\n').map((x) => x.trim()).filter(Boolean);
 function fromEdit(it) {
   const base = { id: it.id, type: it.type, title: it.title };
+  if (it.type === 'lesson') return { ...base, body: it.body, minutes: Number(it.minutes) || 0, key: lines(it.key),
+    check: it.cq.trim() ? { q: it.cq, options: lines(it.copts), answer: Number(it.cans), explain: it.cexp } : null };
   if (it.type === 'video') return { ...base, video: it.video, text: it.text };
   if (it.type === 'quiz') return { ...base, questions: it.questions.map((q) => ({ q: q.q, options: lines(q.options), answer: Number(q.answer), explain: q.explain })) };
   if (it.kind === 'match') return { ...base, kind: 'match', pairs: lines(it.pairs).map((l) => { const [a, ...b] = l.split(PAIR_SEP); return [a, b.join(' ')]; }) };
@@ -34,6 +38,7 @@ const f = reactive({ title: props.course.title, descr: props.course.descr, icon:
 const busy = ref(false), err = ref('');
 
 const NEW = {
+  lesson: () => ({ type: 'lesson', title: '', body: '', minutes: '', key: '', cq: '', copts: '', cans: 0, cexp: '' }),
   video: () => ({ type: 'video', title: '', video: '', text: '' }),
   quiz: () => ({ type: 'quiz', title: '', questions: [newQ()] }),
   match: () => ({ type: 'game', kind: 'match', title: '', pairs: '' }),
@@ -43,7 +48,7 @@ function newQ() { return { _k: key(), q: '', options: '', answer: 0, explain: ''
 function add(kind) { f.items.push({ _k: key(), _open: true, ...NEW[kind]() }); }
 function move(i, d) { const j = i + d; if (j < 0 || j >= f.items.length) return; const [x] = f.items.splice(i, 1); f.items.splice(j, 0, x); }
 function remove(i) { if (confirm(`Удалить «${f.items[i].title || 'без названия'}»? Прогресс учеников по нему тоже удалится.`)) f.items.splice(i, 1); }
-const kindLabel = (it) => (it.type === 'video' ? 'Видео / урок' : it.type === 'quiz' ? 'Тест' : it.kind === 'match' ? 'Игра «Пары»' : 'Игра «Порядок»');
+const kindLabel = (it) => (it.type === 'lesson' ? 'Урок' : it.type === 'video' ? 'Видео / урок' : it.type === 'quiz' ? 'Тест' : it.kind === 'match' ? 'Игра «Пары»' : 'Игра «Порядок»');
 const optList = (q) => lines(q.options);
 
 async function save() {
@@ -83,7 +88,27 @@ async function save() {
       <div v-if="it._open" class="fcol ebody">
         <label class="f">Название<input v-model="it.title" type="text" maxlength="100"></label>
 
-        <template v-if="it.type === 'video'">
+        <template v-if="it.type === 'lesson'">
+          <label class="f">Текст урока <span class="note">«## » — заголовок, «- » — пункт списка, «1. » — шаг, «> » — совет, **жирный**</span>
+            <textarea v-model="it.body" maxlength="8000" rows="12" placeholder="## С чего начать&#10;- Первый пункт&#10;> Важный совет" /></label>
+          <div class="two">
+            <label class="f">Главное <span class="note">до 8 пунктов, каждый с новой строки</span><textarea v-model="it.key" rows="4" /></label>
+            <label class="f">Минут чтения <span class="note">пусто — посчитаем сами</span><input v-model="it.minutes" type="text" inputmode="numeric"></label>
+          </div>
+          <div class="qedit">
+            <b>Вопрос для самопроверки <span class="note">необязательно; урок засчитается после верного ответа</span></b>
+            <input v-model="it.cq" type="text" maxlength="300" placeholder="Текст вопроса">
+            <div class="two">
+              <label class="f">Варианты <span class="note">каждый с новой строки, 2–5</span><textarea v-model="it.copts" rows="3" /></label>
+              <div class="fcol">
+                <label class="f">Правильный<select v-model.number="it.cans"><option v-for="(o, oi) in lines(it.copts)" :key="oi" :value="oi">{{ oi + 1 }}. {{ o }}</option></select></label>
+                <label class="f">Пояснение<input v-model="it.cexp" type="text" maxlength="300"></label>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="it.type === 'video'">
           <label class="f">Ссылка на YouTube <span class="note">необязательно — без видео будет текстовый урок</span><input v-model="it.video" type="text" placeholder="https://www.youtube.com/watch?v=..."></label>
           <label class="f">Текст урока / конспект<textarea v-model="it.text" maxlength="4000" rows="6" /></label>
         </template>
@@ -114,6 +139,7 @@ async function save() {
 
     <div class="addrow">
       <span class="note">Добавить:</span>
+      <button class="btn ghost sm" type="button" @click="add('lesson')"><Icon name="book" />Урок</button>
       <button class="btn ghost sm" type="button" @click="add('video')"><Icon name="play" />Видеоурок</button>
       <button class="btn ghost sm" type="button" @click="add('quiz')"><Icon name="quiz" />Тест</button>
       <button class="btn ghost sm" type="button" @click="add('match')"><Icon name="game" />Игра «Пары»</button>

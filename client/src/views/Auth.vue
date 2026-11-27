@@ -14,8 +14,12 @@ import PhoneInput from '../components/PhoneInput.vue';
 // Вход. Регистрация — на отдельных страницах (/register → выбор роли).
 const route = useRoute(), router = useRouter();
 const pub = ref(null);
-const f = reactive({ phone: '', password: '' });
+const f = reactive({ phone: sessionStorage.getItem('socio.phone') || '', password: '' });
+sessionStorage.removeItem('socio.phone');
 const err = ref(''), busy = ref(false), google = ref(null), as = ref('help');
+// У номера несколько аккаунтов (например, «Нужна помощь» и «Волонтёр») — спрашиваем, куда войти.
+const choose = ref(null); // { roles, again: (role) => Promise }
+const ROLE_LOOK = { user: ['#7c4dde', 'heart'], helper: ['#22b05f', 'hand'], student: ['#f08a24', 'book'] };
 
 onMounted(async () => { pub.value = await api.get('/public').catch(() => null); });
 
@@ -26,13 +30,22 @@ async function run(fn) {
   busy.value = true;
   try { await fn(); } catch (e) { err.value = e.message; } finally { busy.value = false; }
 }
-const submit = () => run(async () => enter(await api.post('/auth/login', f), router, route.query.next));
-const demo = (a) => run(async () => enter(await api.post('/auth/login', { phone: a.phone, password: a.password }), router, route.query.next));
+async function handle(r, again) {
+  if (r.chooseRole) { choose.value = { roles: r.roles, again }; return; }
+  if (r.token) return enter(r, router, route.query.next);
+  return r;
+}
+const pickRole = (role) => run(async () => { const again = choose.value.again; choose.value = null; await handle(await again(role), again); });
+const submit = () => run(async () => {
+  const again = (role) => api.post('/auth/login', { ...f, role });
+  await handle(await again(), again);
+});
+const demo = (a) => run(async () => enter(await api.post('/auth/login', { phone: a.phone, password: a.password, role: a.role }), router, route.query.next));
 // Вход через Google: если аккаунта ещё нет — выбрать роль и дозаполнить профиль прямо здесь.
 const onGoogle = (credential) => run(async () => {
-  const r = await api.post('/auth/google', { credential });
-  if (r.token) return enter(r, router, route.query.next);
-  google.value = r;
+  const again = (role) => api.post('/auth/google', { credential, role });
+  const r = await handle(await again(), again);
+  if (r?.needProfile) google.value = r;
 });
 </script>
 
@@ -58,6 +71,19 @@ const onGoogle = (credential) => run(async () => {
             </div>
             <SignupForm v-if="pub" :key="as" :role="ROLES[as].role" :districts="Object.keys(pub.districts)" :categories="pub.categories"
               :client-id="pub.googleClientId" :google="google" :submit-label="ROLES[as].button" />
+          </template>
+
+          <template v-else-if="choose">
+            <h1>Куда войти?</h1>
+            <p class="sub">С этим номером у вас несколько аккаунтов. Выберите, в какой войти — переключиться можно в любой момент.</p>
+            <div class="roles pickrole">
+              <button v-for="(r, i) in choose.roles" :key="r.role" class="rolecard pop" :style="{ animationDelay: i * 70 + 'ms' }" type="button" :disabled="busy" @click="pickRole(r.role)">
+                <span class="ti" :style="{ background: ROLE_LOOK[r.role][0] }"><Icon :name="ROLE_LOOK[r.role][1]" /></span>
+                <b>{{ r.title }}</b><span>{{ r.name }}</span>
+              </button>
+            </div>
+            <p v-if="err" class="formerr" role="alert">{{ err }}</p>
+            <button class="btn ghost" type="button" style="margin-top:14px" @click="choose = null">Назад</button>
           </template>
 
           <template v-else>

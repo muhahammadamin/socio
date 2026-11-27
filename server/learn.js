@@ -7,7 +7,7 @@ import { changed, changedAll } from './events.js';
 import { addCoins } from './coins.js';
 
 // Сколько баллов даёт полностью пройденный материал.
-export const POINTS = { video: 5, quiz: 10, game: 10 };
+export const POINTS = { lesson: 5, video: 5, quiz: 10, game: 10 };
 
 const newId = () => crypto.randomBytes(5).toString('hex');
 const parse = (s) => { try { const a = JSON.parse(s || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
@@ -39,6 +39,22 @@ function cleanItems(items, { Bad, str }) {
       const text = String(it.text ?? '').trim().slice(0, 4000);
       if (!video && !text) throw new Bad(`${n}: добавьте ссылку на видео или текст урока.`);
       return { ...base, video, text };
+    }
+    // Обычный урок: текст с заголовками (## ), списками (- ), советами (> ), «главное» и вопросом для самопроверки.
+    if (it.type === 'lesson') {
+      const body = str(it.body, 20, 8000, `${n}: напишите текст урока (от 20 символов).`);
+      const minutes = Math.min(60, Math.max(1, Math.round(Number(it.minutes)) || Math.ceil(body.split(/\s+/).length / 150)));
+      const key = (Array.isArray(it.key) ? it.key : []).map((k) => String(k ?? '').trim()).filter(Boolean).slice(0, 8);
+      key.forEach((k) => line(k, 200, `${n}: пункт «Главное» слишком длинный.`));
+      let check = null;
+      if (it.check?.q) {
+        const options = (Array.isArray(it.check.options) ? it.check.options : []).map((o) => String(o ?? '').trim()).filter(Boolean);
+        if (options.length < 2 || options.length > 5) throw new Bad(`${n}: в вопросе для самопроверки нужно от 2 до 5 вариантов.`);
+        const answer = Number(it.check.answer);
+        if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) throw new Bad(`${n}: отметьте правильный ответ самопроверки.`);
+        check = { q: str(it.check.q, 2, 300, `${n}: введите вопрос самопроверки.`), options, answer, explain: String(it.check.explain ?? '').trim().slice(0, 300) };
+      }
+      return { ...base, minutes, body, key, check };
     }
     if (it.type === 'quiz') {
       const qs = Array.isArray(it.questions) ? it.questions : [];
@@ -98,6 +114,12 @@ async function progressOf(uid) {
   for (const p of await all('SELECT course_id, item_id, score FROM learn_progress WHERE user_id=?', uid)) (out[p.course_id] ||= {})[p.item_id] = p.score;
   return out;
 }
+/** Дни (по Ташкенту), когда человек учился, — для серии «дней подряд». */
+async function activeDays(uid) {
+  const since = Date.now() - 60 * 864e5;
+  const rows = await all('SELECT DISTINCT ((ts + 18000000) / 86400000) d FROM learn_progress WHERE user_id=? AND ts>=?', uid, since);
+  return rows.map((r) => Number(r.d)).sort((a, b) => b - a);
+}
 async function record(uid, cid, iid, score) {
   await run(`INSERT INTO learn_progress (user_id,course_id,item_id,score,ts) VALUES (?,?,?,?,?)
        ON CONFLICT(user_id,course_id,item_id) DO UPDATE SET score=MAX(score, excluded.score), ts=excluded.ts`, uid, cid, iid, score, Date.now());
@@ -129,6 +151,7 @@ export function publicLearnRoutes(api, h) {
       points: POINTS,
       courses: (await all('SELECT * FROM courses ORDER BY id')).map((c) => shapeCourse(c, false)),
       progress: u ? await progressOf(u.id) : null,
+      days: u ? await activeDays(u.id) : null,
       leaders: await leaders(),
       shorts: await all('SELECT id, title, video, topic FROM shorts ORDER BY id DESC'),
     };

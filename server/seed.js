@@ -1,6 +1,7 @@
 import { run, one, all, tx } from './db.js';
 import { hashPassword } from './auth.js';
 import { ensureCourses } from './courses-seed.js';
+import { ensureLessons } from './lessons-seed.js';
 import { ensureRewards } from './coins.js';
 import { DISTRICTS, STATUSES, phoneKey } from '../shared/constants.js';
 
@@ -60,18 +61,12 @@ export async function ensureAdmin() {
   const admin = await one(`SELECT id, phone_key FROM users WHERE role='admin' ORDER BY id LIMIT 1`);
   if (admin) {
     if (process.env.ADMIN_PHONE && admin.phone_key !== key) {
-      const other = await one(`SELECT id, role, name FROM users WHERE phone_key=? AND id<>?`, key, admin.id);
-      // Номер по умолчанию закреплён за администратором: обычный аккаунт с ним удаляется.
-      // Любой другой занятый номер не трогаем — только предупреждение.
-      if (other && (other.role === 'admin' || key !== phoneKey(DEFAULT_ADMIN_PHONE))) {
-        console.warn(`[socio] номер ${phone} уже занят другим пользователем — телефон администратора не изменён`);
+      // Аккаунты сайта с этим номером не мешают: номер уникален только среди администраторов.
+      if (await one(`SELECT id FROM users WHERE phone_key=? AND role='admin' AND id<>?`, key, admin.id)) {
+        console.warn(`[socio] номер ${phone} уже у другого администратора — телефон не изменён`);
         return;
       }
-      await tx(async () => {
-        if (other) await deleteUser(other.id);
-        await run(`UPDATE users SET phone=?, phone_key=? WHERE id=?`, phone, key, admin.id);
-      });
-      if (other) console.log(`[socio] удалён аккаунт «${other.name}» (#${other.id}, ${other.role}), занимавший номер администратора`);
+      await run(`UPDATE users SET phone=?, phone_key=? WHERE id=?`, phone, key, admin.id);
       console.log(`[socio] телефон администратора изменён на ${phone}`);
     }
     return;
@@ -234,5 +229,6 @@ export async function initData() {
   await ensureAdmin();
   await ensureCategories();
   await ensureCourses();
+  await ensureLessons();
   await ensureRewards(isDemo());
 }

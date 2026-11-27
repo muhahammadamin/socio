@@ -206,7 +206,7 @@ publicRewardRoutes(api, { Bad, wrap });
 api.post('/volunteers', wrap(async (req) => {
   const b = req.body || {};
   const v = { name: str(b.name, 2, 80, 'Введите имя.'), phone: phone(b.phone), dist: dist(b.dist), skills: skills(b.skills), about: str(b.about, 10, 500, 'Расскажите о себе подробнее (от 10 символов).') };
-  if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(v.phone))) throw new Bad('Этот телефон уже зарегистрирован. Войдите в аккаунт.', 409);
+  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, phoneKey(v.phone))) throw new Bad('С этим номером уже есть аккаунт волонтёра. Войдите в него.', 409);
   if ((await all('SELECT phone FROM volunteers')).some((x) => phoneKey(x.phone) === phoneKey(v.phone))) throw new Bad('Заявка с этим телефоном уже на рассмотрении.', 409);
   await run('INSERT INTO volunteers (name,phone,dist,skills,about,created_at) VALUES (?,?,?,?,?,?)', v.name, v.phone, v.dist, v.skills, v.about, Date.now());
   await notifyAdmins(`Новый волонтёр: ${v.name} (${v.dist})`);
@@ -216,15 +216,19 @@ api.post('/volunteers', wrap(async (req) => {
 
 /* ---------- вход ---------- */
 // Вход на сайте — для пользователей, помощников и студентов; администратор входит только через /admin/login.
+// У одного номера может быть по аккаунту в каждой роли. Если пароль подходит к нескольким — человек выбирает, куда войти.
+const ROLE_T = { user: 'Нужна помощь', helper: 'Волонтёр', student: 'Студент' };
 async function login(req, admin) {
   const b = req.body || {};
-  const u = await one('SELECT * FROM users WHERE phone_key=?', phoneKey(b.phone));
-  if (!u || !checkPassword(b.password, u.pass) || (u.role === 'admin') !== admin) {
+  const list = (await all(`SELECT * FROM users WHERE phone_key=? AND role ${admin ? '=' : '!='} 'admin' ORDER BY id`, phoneKey(b.phone)))
+    .filter((u) => checkPassword(b.password, u.pass));
+  const pick = b.role ? list.filter((u) => u.role === b.role) : list;
+  if (!pick.length) {
     countFailure(req);
-    if (u && checkPassword(b.password, u.pass)) throw new Bad(admin ? 'Это вход только для администраторов. Войдите на сайте.' : 'Администраторы входят через отдельную страницу панели управления.', 403);
     throw new Bad('Неверный телефон или пароль', 401);
   }
-  return { token: makeToken(u.id), user: await pubUser(u) };
+  if (pick.length > 1) return { chooseRole: true, roles: pick.map((u) => ({ role: u.role, title: ROLE_T[u.role], name: u.name })) };
+  return { token: makeToken(pick[0].id), user: await pubUser(pick[0]) };
 }
 api.post('/auth/login', loginLimiter, wrap(async (req) => await login(req, false)));
 api.post('/auth/admin-login', loginLimiter, wrap(async (req) => await login(req, true)));
@@ -242,7 +246,7 @@ async function createAccount(req, b, google = null) {
   const school = role === 'student' ? str(b.school, 2, 120, 'Укажите, где вы учитесь.') : '';
   const sk = role === 'helper' ? skills(b.skills) : '[]';
   const nd = role === 'user' ? await needs(b.needs) : '[]';
-  if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(ph))) throw new Bad('Этот телефон уже зарегистрирован. Войдите в аккаунт.', 409);
+  if (await one('SELECT id FROM users WHERE phone_key=? AND role=?', phoneKey(ph), role)) throw new Bad(`С этим номером уже есть аккаунт «${ROLE_T[role]}». Войдите в него — или выберите другую роль.`, 409);
   const id = Number((await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,school,skills,needs,google_sub,email,verified,source,source_detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     role, name, ph, phoneKey(ph), pass, d, school, sk, nd, google?.sub ?? null, google?.email ?? '', role === 'helper' ? 0 : 1, src.source, src.detail, Date.now())).lastInsertRowid);
   if (role === 'student') await notifyAdmins(`Новый студент: ${name} (${school})`);
@@ -265,18 +269,18 @@ async function googleAccount(credential) {
 }
 api.post('/auth/google', loginLimiter, wrap(async (req) => {
   const g = await googleAccount(req.body?.credential);
-  const u = await one('SELECT * FROM users WHERE google_sub=?', g.sub);
-  if (u) {
-    if (u.role === 'admin') throw new Bad('Администраторы входят через отдельную страницу панели управления.', 403);
-    return { token: makeToken(u.id), user: await pubUser(u) };
-  }
+  const list = await all(`SELECT * FROM users WHERE google_sub=? AND role!='admin' ORDER BY id`, g.sub);
+  const pick = req.body?.role ? list.filter((u) => u.role === req.body.role) : list;
+  if (pick.length === 1) return { token: makeToken(pick[0].id), user: await pubUser(pick[0]) };
+  if (pick.length > 1) return { chooseRole: true, roles: pick.map((u) => ({ role: u.role, title: ROLE_T[u.role], name: u.name })) };
   // Новый человек: платформа работает по телефону, поэтому просим дозаполнить профиль.
   return { needProfile: true, ticket: makeTicket({ sub: g.sub, email: g.email, name: g.name }), name: g.name, email: g.email };
 }));
 api.post('/auth/google/complete', loginLimiter, wrap(async (req) => {
   const t = readTicket(req.body?.ticket);
   if (!t) throw new Bad('Сессия Google истекла. Нажмите «Войти через Google» ещё раз.', 401);
-  if (await one('SELECT id FROM users WHERE google_sub=?', t.sub)) throw new Bad('Этот Google-аккаунт уже зарегистрирован. Войдите через Google.', 409);
+  if (await one('SELECT id FROM users WHERE google_sub=? AND role=?', t.sub, SELF_ROLES.includes(req.body?.role) ? req.body.role : 'user'))
+    throw new Bad('С этим Google-аккаунтом уже есть аккаунт в этой роли. Войдите через Google.', 409);
   countFailure(req);
   return await createAccount(req, { ...req.body, name: req.body?.name || t.name }, { sub: t.sub, email: t.email, name: t.name });
 }));
@@ -540,7 +544,7 @@ const adminList = async () => (await all(`SELECT id, name, phone, phone_key, cre
 api.post('/admins', allow('admin'), wrap(async (req) => {
   const b = req.body || {};
   const name = str(b.name, 2, 80, 'Введите имя администратора.'), ph = phone(b.phone);
-  if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(ph))) throw new Bad('Этот телефон уже зарегистрирован на сайте. Укажите другой номер.', 409);
+  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='admin'`, phoneKey(ph))) throw new Bad('Этот номер уже у другого администратора.', 409);
   const pw = b.password ? password(b.password) : genPassword();
   await run(`INSERT INTO users (role,name,phone,phone_key,pass,source,created_at) VALUES ('admin',?,?,?,?,'admin',?)`, name, ph, phoneKey(ph), hashPassword(pw), Date.now());
   await notifyAdmins(`${req.user.name} добавил администратора ${name}`);
@@ -560,7 +564,7 @@ api.delete('/admins/:id', allow('admin'), wrap(async (req) => {
 api.post('/helpers', allow('admin'), wrap(async (req) => {
   const b = req.body || {};
   const name = str(b.name, 2, 80, 'Введите имя помощника.'), ph = phone(b.phone), d = dist(b.dist), sk = skills(b.skills, false);
-  if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(ph))) throw new Bad('Этот телефон уже зарегистрирован.', 409);
+  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, phoneKey(ph))) throw new Bad('С этим номером уже есть аккаунт волонтёра.', 409);
   const pw = genPassword();
   const hid = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,source,created_at) VALUES ('helper',?,?,?,?,?,?,'admin',?)`, name, ph, phoneKey(ph), hashPassword(pw), d, sk, Date.now())).lastInsertRowid;
   await tx(() => offerToHelper(hid));
@@ -596,7 +600,7 @@ api.post('/helpers/:id/verify', allow('admin'), wrap(async (req) => {
 api.post('/volunteers/:id/approve', allow('admin'), wrap(async (req) => {
   const v = await one('SELECT * FROM volunteers WHERE id=?', Number(req.params.id));
   if (!v) throw new Bad('Заявка волонтёра не найдена', 404);
-  if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(v.phone))) throw new Bad('Этот телефон уже зарегистрирован.', 409);
+  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, phoneKey(v.phone))) throw new Bad('С этим номером уже есть аккаунт волонтёра.', 409);
   const pw = genPassword();
   await tx(async () => {
     const id = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,created_at) VALUES ('helper',?,?,?,?,?,?,?)`, v.name, v.phone, phoneKey(v.phone), hashPassword(pw), v.dist, v.skills, Date.now())).lastInsertRowid;
@@ -647,6 +651,7 @@ api.post('/students/apply', allow('student'), wrap(async (req) => {
 api.post('/students/:id/promote', allow('admin'), wrap(async (req) => {
   const s = await one(`SELECT * FROM users WHERE id=? AND role='student'`, Number(req.params.id));
   if (!s) throw new Bad('Студент не найден', 404);
+  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, s.phone_key)) throw new Bad(`У ${s.name} уже есть отдельный аккаунт волонтёра с этим номером — пусть войдёт в него.`, 409);
   await run(`UPDATE users SET role='helper' WHERE id=?`, s.id);
   await notify(s.id, 'Вы стали помощником! Войдите заново, чтобы открыть кабинет помощника. Коины сохранились.');
   await changed([s.id]);

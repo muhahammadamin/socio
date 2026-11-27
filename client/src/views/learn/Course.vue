@@ -6,6 +6,8 @@ import { L, loadLearn, complete, isDone, scoreOf, doneCount, typeIcon, typeLabel
 import Icon from '../../components/Icon.vue';
 import AcademyBar from '../../components/AcademyBar.vue';
 import VideoLesson from '../../components/learn/VideoLesson.vue';
+import LessonReader from '../../components/learn/LessonReader.vue';
+import { confetti } from '../../fx.js';
 import QuizRunner from '../../components/learn/QuizRunner.vue';
 import MatchGame from '../../components/learn/MatchGame.vue';
 import OrderGame from '../../components/learn/OrderGame.vue';
@@ -39,9 +41,10 @@ async function onDone(score, quizCoins = 0) {
     const coins = it.type === 'quiz' ? quizCoins : (await complete(c.id, it.id, score)).coins;
     justDone.value = true;
     if (coins) {
+      confetti();
       toast(`Курс «${c.title}» пройден! +${coins} коинов 🎉`);
       if (S.me) load().catch(() => {});
-    } else if (doneCount(c) === c.items.length && first) toast(`Курс «${c.title}» пройден! 🎉`);
+    } else if (doneCount(c) === c.items.length && first) { confetti(); toast(`Курс «${c.title}» пройден! 🎉`); }
     else if (first && score >= PASS) toast(`+${Math.round((L.points[it.type] || 0) * score)} баллов`);
   } catch (e) { toast(e.message, true); }
 }
@@ -63,7 +66,7 @@ const pct = (cid, iid) => Math.round((scoreOf(cid, iid) || 0) * 100);
             <h1>{{ course.title }}</h1>
             <p>{{ course.descr }}</p>
           </div>
-          <div class="cprog"><b class="num">{{ doneCount(course) }}/{{ course.items.length }}</b><small>пройдено</small></div>
+          <div class="cprog ring" :style="{ '--p': course.items.length ? doneCount(course) / course.items.length * 100 : 0 }"><b class="num">{{ doneCount(course) }}/{{ course.items.length }}</b><small>пройдено</small></div>
         </div>
 
         <div v-if="!course.items.length" class="card empty"><b>Материалы скоро появятся</b>Загляните сюда чуть позже.</div>
@@ -72,15 +75,17 @@ const pct = (cid, iid) => Math.round((scoreOf(cid, iid) || 0) * 100);
             <button v-for="(it, i) in course.items" :key="it.id" type="button" class="lstep" :class="{ cur: i === idx, done: isDone(course.id, it.id) }" :aria-current="i === idx ? 'step' : null" @click="open(it)">
               <span class="li"><Icon :name="isDone(course.id, it.id) ? 'check' : typeIcon(it)" /></span>
               <span class="grow"><small>{{ typeLabel(it) }}</small>{{ it.title }}</span>
-              <span v-if="it.type !== 'video' && scoreOf(course.id, it.id) !== undefined" class="num note">{{ pct(course.id, it.id) }}%</span>
+              <span v-if="!['video', 'lesson'].includes(it.type) && scoreOf(course.id, it.id) !== undefined" class="num note">{{ pct(course.id, it.id) }}%</span>
             </button>
           </nav>
 
-          <section v-if="item" class="card lmain">
+          <Transition name="slide" mode="out-in">
+          <section v-if="item" :key="item.id" class="card lmain">
             <div class="ch">
               <div><small class="kind"><Icon :name="typeIcon(item)" />{{ typeLabel(item) }} · {{ idx + 1 }} из {{ course.items.length }}</small><h2>{{ item.title }}</h2></div>
             </div>
-            <VideoLesson v-if="item.type === 'video'" :item="item" :done="isDone(course.id, item.id)" @done="onDone" />
+            <LessonReader v-if="item.type === 'lesson'" :item="item" :done="isDone(course.id, item.id)" @done="onDone" />
+            <VideoLesson v-else-if="item.type === 'video'" :item="item" :done="isDone(course.id, item.id)" @done="onDone" />
             <QuizRunner v-else-if="item.type === 'quiz'" :item="item" :course-id="course.id" @done="onDone" />
             <MatchGame v-else-if="item.kind === 'match'" :item="item" @done="onDone" />
             <OrderGame v-else-if="item.kind === 'order'" :item="item" @done="onDone" />
@@ -90,6 +95,7 @@ const pct = (cid, iid) => Math.round((scoreOf(cid, iid) || 0) * 100);
               <RouterLink v-else class="btn green" to="/academy"><Icon name="trophy" />К другим курсам</RouterLink>
             </div>
           </section>
+          </Transition>
         </div>
       </template>
     </div>
