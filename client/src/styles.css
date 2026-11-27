@@ -721,8 +721,7 @@ input,select,textarea{transition:border-color .15s,box-shadow .15s}
 @media (max-width:520px){.cert{padding:24px 20px}.cert h1{font-size:30px}}
 
 /* ---------- анимации: появление при прокрутке, переходы ---------- */
-.reveal{opacity:0;transform:translateY(18px);transition:opacity .55s cubic-bezier(.2,.7,.2,1) var(--d,0ms),transform .55s cubic-bezier(.2,.7,.2,1) var(--d,0ms)}
-.reveal.in{opacity:1;transform:none}
+.reveal.in{animation:riseIn .6s cubic-bezier(.2,.7,.2,1) var(--d,0ms) backwards}
 .slide-enter-active,.slide-leave-active{transition:opacity .25s,transform .25s}
 .slide-enter-from{opacity:0;transform:translateX(24px)}
 .slide-leave-to{opacity:0;transform:translateX(-24px)}
@@ -832,134 +831,28 @@ input,select,textarea{transition:border-color .15s,box-shadow .15s}
 
 @media (max-width:760px){.stgrid{grid-template-columns:1fr}.sthero{padding:24px 20px}.st-hi h1{font-size:26px}.st-ring{width:120px;height:120px}}
 
-/* =====================================================================
-   Оформление всего сайта: глубина, градиенты, живые кнопки и переходы
-   ===================================================================== */
-:root{--shadow:0 1px 2px rgba(20,25,54,.04),0 4px 10px rgba(20,25,54,.04),0 14px 34px rgba(20,25,54,.06);--shadow-lg:0 22px 60px rgba(20,25,54,.14);--grad:linear-gradient(135deg,#3b5bf0,#7c4dde)}
-:root[data-theme="dark"]{--shadow:0 1px 2px rgba(0,0,0,.35),0 10px 30px rgba(0,0,0,.3);--shadow-lg:0 22px 60px rgba(0,0,0,.5);--grad:linear-gradient(135deg,#5b7bff,#9a6bff)}
-html{scroll-behavior:smooth}
-::selection{background:color-mix(in srgb,var(--accent) 28%,transparent)}
-body{background:radial-gradient(1200px 600px at 100% -10%,color-mix(in srgb,var(--violet) 7%,transparent),transparent 60%),radial-gradient(900px 500px at -10% 30%,color-mix(in srgb,var(--accent) 6%,transparent),transparent 60%),var(--bg);background-attachment:fixed}
-*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--muted) 45%,transparent) transparent}
-::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 40%,transparent);border-radius:99px;border:3px solid transparent;background-clip:padding-box}
-::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--muted) 65%,transparent)}
+.streakcard{display:flex;align-items:center;gap:14px}
+.streakcard .fl{font-size:38px;filter:grayscale(1);opacity:.5}
+.streakcard.lit .fl{filter:none;opacity:1;animation:flick 1.6s ease-in-out infinite}
+.streakcard b{font-size:26px}
 
-/* полоса прокрутки страницы */
+/* ---------- только анимации: прежний вид не меняется ---------- */
 .scrollbar-top{position:fixed;top:0;left:0;right:0;height:3px;z-index:100;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,#3b5bf0,#9a58e8,#f08a24);pointer-events:none}
-
-/* кнопки: градиент, блик при наведении, «волна» при нажатии */
-.btn{position:relative;overflow:hidden;isolation:isolate}
-.btn:not(.ghost):not(.red):not(.light):not(.green){background:var(--grad)}
-.btn.green{background:linear-gradient(135deg,#1fa85c,#14a89a)}
-.btn:not(.ghost):not(.red):not(.light)::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);transform:translateX(-120%);transition:transform .6s}
-.btn:not([disabled]):hover::after{transform:translateX(120%)}
-.btn[disabled]{opacity:.55;cursor:not-allowed}
-.btn.lg{border-radius:12px}
-.ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.25;transform:scale(0);animation:ripple .6s ease-out forwards;pointer-events:none;z-index:0}
+.btn{position:relative;overflow:hidden}
+.ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.25;transform:scale(0);animation:ripple .6s ease-out forwards;pointer-events:none}
 @keyframes ripple{to{transform:scale(1);opacity:0}}
 .rolecard,.chip{position:relative;overflow:hidden}
-
-/* поля ввода: мягкое свечение в фокусе */
-input:not([type=checkbox]):not([type=radio]),select,textarea{border-radius:10px}
-input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 16%,transparent)}
-
-/* карточки: тонкая рамка-подсветка и подъём */
-.card{border:1px solid color-mix(in srgb,var(--line) 70%,transparent);transition:box-shadow .25s,transform .25s,border-color .25s}
-.page .card:hover{box-shadow:var(--shadow),0 10px 30px color-mix(in srgb,var(--accent) 7%,transparent);border-color:color-mix(in srgb,var(--accent) 18%,var(--line))}
-.head h1{background:linear-gradient(90deg,var(--ink) 55%,color-mix(in srgb,var(--accent) 80%,var(--ink)));-webkit-background-clip:text;background-clip:text;color:transparent}
-
-/* плитки со статистикой: градиентные значки и световой ореол */
-.tile{position:relative;overflow:hidden;background:var(--surface);box-shadow:var(--shadow);border:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
-.tile::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;opacity:.08;transition:transform .4s}
-.tile:hover::after{transform:scale(1.4)}
-.tile{--tc:var(--accent)}
-.tile.blue{--tc:var(--p-blue)}.tile.green{--tc:var(--p-green)}.tile.purple{--tc:var(--p-purple)}.tile.orange{--tc:var(--p-orange)}
-.tile::after{background:var(--tc)!important}
-.tile .ti{background:linear-gradient(135deg,var(--tc),color-mix(in srgb,var(--tc) 55%,#fff))!important;color:#fff;box-shadow:0 8px 18px color-mix(in srgb,var(--tc) 35%,transparent)}
-.tile .ti .ic{color:#fff}
-
-/* баннеры: переливающийся градиент */
-.banner{background-size:200% 200%!important;animation:gradmove 8s ease infinite;box-shadow:0 14px 34px rgba(124,77,222,.28);transition:transform .25s}
-a.banner:hover{transform:translateY(-3px)}
-@keyframes gradmove{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-
-/* статусы */
-.pill{transition:transform .2s}
-.pill::before{animation:dotpulse 2.4s ease-in-out infinite}
-@keyframes dotpulse{50%{opacity:.4}}
-
-/* таблицы */
-tbody tr{transition:background .15s}
-tbody tr:hover{background:color-mix(in srgb,var(--accent) 4%,transparent)}
-
-/* шапки сайта и кабинетов: стекло и анимированная полоса */
-.sitebar,.rhead{box-shadow:0 1px 0 var(--line),0 8px 24px rgba(20,25,54,.04)}
-.rhead::before{background-size:200% 100%;animation:gradmove 6s ease infinite}
-.rnav a{position:relative}
-.rnav a::after{content:"";position:absolute;left:14%;right:14%;bottom:2px;height:2px;border-radius:2px;background:var(--c,var(--accent));transform:scaleX(0);transition:transform .25s}
-.rnav a:hover::after,.rnav a.on::after{transform:scaleX(1)}
-.sitebar .logo svg,.rbrand .rb-ic{transition:transform .4s cubic-bezier(.2,.9,.3,1.4)}
-.sitebar .logo:hover svg,.rbrand:hover .rb-ic{transform:rotate(-10deg) scale(1.08)}
-
-/* панель администратора */
-aside{background:linear-gradient(180deg,var(--side),color-mix(in srgb,var(--side) 85%,#3b2a7a))}
-.nav a.router-link-exact-active{background:var(--grad);box-shadow:0 8px 20px rgba(59,91,240,.35)}
-
-/* главная (лендинг): живой фон, сияющий заголовок */
-.lhero::before,.lhero::after{content:"";position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;pointer-events:none;animation:drift 12s ease-in-out infinite}
-.lhero::before{width:380px;height:380px;background:#5b7bff;top:-120px;left:-80px}
-.lhero::after{width:320px;height:320px;background:#c058e8;bottom:-140px;right:10%;animation-delay:-5s}
-.lhero .wrap{position:relative;z-index:1}
-.lhero h1 em{background-size:200% auto;animation:textshine 5s linear infinite}
+.lhero h1 em{background-size:200% auto;animation:textshine 6s linear infinite}
 @keyframes textshine{to{background-position:200% center}}
-.lhero .kicker{backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.14)}
-.lhero .mapcard{backdrop-filter:blur(8px);box-shadow:0 30px 60px rgba(0,0,0,.3);animation:hoverfloat 7s ease-in-out infinite}
+.lhero .mapcard{animation:hoverfloat 7s ease-in-out infinite}
 @keyframes hoverfloat{50%{transform:translateY(-8px)}}
-.counter{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
-.counter b{background:linear-gradient(135deg,var(--accent),#b06bff 60%,#f08a24);-webkit-background-clip:text;background-clip:text;color:transparent}
-.counter b *{color:transparent}
-.counter::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--grad);transform:scaleX(0);transform-origin:left;transition:transform .5s}
-.counter:hover::before{transform:scaleX(1)}
-.steps>*{transition:transform .25s,box-shadow .25s}
-.steps>*:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
-.catcard{transition:transform .25s,box-shadow .25s,border-color .25s}
-.catcard:hover{transform:translateY(-4px) rotate(-.3deg);box-shadow:0 16px 36px color-mix(in srgb,var(--c) 22%,transparent);border-color:var(--c)}
-.catcard .cico{transition:transform .35s cubic-bezier(.2,.9,.3,1.4)}
-.catcard:hover .cico{transform:scale(1.12) rotate(-8deg)}
-.faq details{transition:box-shadow .2s,background .2s}
-.faq details[open]{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 40%,transparent),var(--shadow)}
+.rhead::before{background-size:200% 100%;animation:gradmove 6s ease infinite}
+.banner{background-size:200% 200%;animation:gradmove 8s ease infinite}
+@keyframes gradmove{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.steps>*,.catcard,.rolecard,.reward{transition:transform .25s,box-shadow .25s}
+.steps>*:hover,.catcard:hover,.rolecard:hover,.reward:hover{transform:translateY(-4px)}
+.catcard .cico,.rolecard .ti,.reward .rlogo{transition:transform .35s cubic-bezier(.2,.9,.3,1.4)}
+.catcard:hover .cico,.rolecard:hover .ti,.reward:hover .rlogo{transform:scale(1.12) rotate(-8deg)}
 .faq details[open] p{animation:riseIn .3s ease-out}
-
-/* регистрация и вход */
-.authbox .card{box-shadow:var(--shadow-lg);animation:popIn .45s cubic-bezier(.2,.9,.3,1.2)}
-.auth{background:radial-gradient(600px 300px at 50% 0%,color-mix(in srgb,var(--accent) 10%,transparent),transparent 70%)}
-.rolecard{transition:transform .2s,box-shadow .2s,outline-color .2s}
-.rolecard:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
-.rolecard .ti{transition:transform .35s cubic-bezier(.2,.9,.3,1.4)}
-.rolecard:hover .ti{transform:scale(1.12) rotate(-8deg)}
-.rolebig .ic{transition:transform .3s}
-.rolebig:hover li .ic{transform:scale(1.15)}
-
-/* модальные окна и уведомления */
-.modalback{backdrop-filter:blur(6px)}
-.modal{box-shadow:var(--shadow-lg),0 0 0 1px color-mix(in srgb,var(--line) 60%,transparent)}
-#toast{box-shadow:0 14px 34px rgba(0,0,0,.25);backdrop-filter:blur(8px);background:color-mix(in srgb,#141936 92%,transparent);border:1px solid rgba(255,255,255,.08)}
-#toast::before{content:"✓";display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#22b05f;margin-right:10px;font-size:12px}
-#toast.bad::before{content:"!";background:#fff;color:#b3262c}
-
-/* пустые состояния, сертификат, награды */
-.empty b{font-size:15.5px}
-.empty::before{content:"✦";display:grid;place-items:center;width:52px;height:52px;margin:0 auto 10px;border-radius:16px;font-size:22px;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);animation:hoverfloat 4s ease-in-out infinite}
-.reward{transition:transform .25s,box-shadow .25s;border:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
-.reward:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
-.reward .rlogo{transition:transform .35s cubic-bezier(.2,.9,.3,1.4)}
-.reward:hover .rlogo{transform:scale(1.12) rotate(-8deg)}
-.cert{animation:popIn .6s cubic-bezier(.2,.9,.3,1.2)}
-.hcard{transition:background .2s}
 .offer{animation:popIn .45s cubic-bezier(.2,.9,.3,1.2) backwards}
-
-/* подвал */
-.footer{background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--accent) 4%,transparent))}
-
-@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}.scrollbar-top{display:none}}
+@media (prefers-reduced-motion:reduce){.scrollbar-top{display:none}}
