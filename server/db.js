@@ -142,6 +142,15 @@ CREATE TABLE IF NOT EXISTS notifications (
   read    INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_notes_user ON notifications(user_id);
+-- Telegram: чат привязан к номеру (Telegram подтверждает номер сам) — сюда приходят уведомления всех аккаунтов с ним
+CREATE TABLE IF NOT EXISTS tg_chats (
+  chat_id   TEXT    PRIMARY KEY,
+  phone_key TEXT    NOT NULL,
+  tg_user   TEXT    NOT NULL DEFAULT '',
+  tg_name   TEXT    NOT NULL DEFAULT '',
+  linked_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tg_phone ON tg_chats(phone_key);
 CREATE TABLE IF NOT EXISTS courses (
   id         INTEGER PRIMARY KEY,
   title      TEXT    NOT NULL,

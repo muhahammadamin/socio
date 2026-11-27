@@ -59,6 +59,13 @@ async function reset() {
         <div class="setrow"><div><b>Заявок создано</b></div><b class="num" style="font-size:20px;flex:none">{{ S.reqs.length }}</b></div>
         <div class="setrow"><div><b>Баланс добра</b></div><b class="num" style="font-size:20px;flex:none">{{ S.me.balance }}</b></div>
       </template>
+      <div v-if="S.me.telegram" class="setrow">
+        <div><b>Telegram</b>
+          <span v-if="S.me.telegram.linked">Подключён: уведомления всех ваших аккаунтов с номером {{ S.me.phone }} приходят в @{{ S.me.telegram.bot }}<template v-if="role === 'helper'">, а новые заявки можно принимать кнопками прямо в Telegram</template>.</span>
+          <span v-else>Получайте уведомления в Telegram<template v-if="role === 'helper'"> и принимайте заявки одной кнопкой</template>. Откройте бота и нажмите «Поделиться номером» — пароль не нужен.</span>
+        </div>
+        <a class="btn sm" :class="{ ghost: S.me.telegram.linked }" style="flex:none" :href="`https://t.me/${S.me.telegram.bot}?start=link`" target="_blank" rel="noopener">{{ S.me.telegram.linked ? 'Открыть бота' : 'Подключить' }}</a>
+      </div>
       <div class="setrow">
         <div><b>Тёмная тема</b><span>Переключает оформление на этом устройстве</span></div>
         <button class="switch" type="button" role="switch" :aria-checked="S.theme === 'dark'" aria-label="Тёмная тема" @click="toggleTheme" />

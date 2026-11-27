@@ -13,7 +13,7 @@ const base = computed(() => HOME[S.me.role]);
 const NAV = {
   admin: [['', 'Главная', 'home'], ['people', 'Все участники', 'users'], ['requests', 'Все заявки', 'list'], ['volunteers', 'Волонтёры', 'users'], ['helpers', 'Помощники', 'shield'],
     ['students', 'Студенты', 'book'], ['users', 'Пользователи', 'user'], ['stats', 'Статистика', 'chart'], ['categories', 'Категории', 'grid'], ['learning', 'Обучение', 'play'],
-    ['rewards', 'Награды', 'coin'], ['complaints', 'Жалобы', 'flag'], ['admins', 'Администраторы', 'lock'], ['settings', 'Настройки', 'sliders']],
+    ['rewards', 'Награды', 'coin'], ['complaints', 'Жалобы', 'flag'], ['admins', 'Администраторы', 'lock'], ['telegram', 'Telegram-бот', 'send'], ['settings', 'Настройки', 'sliders']],
   helper: [['', 'Главная', 'home'], ['tasks', 'Мои заявки', 'list'], ['history', 'История', 'history'], ['stats', 'Статистика', 'chart'], ['coins', 'Коины', 'coin'], ['/academy', 'Академия', 'book'], ['notifications', 'Уведомления', 'bell'], ['profile', 'Профиль', 'user']],
   student: [['', 'Главная', 'home'], ['/academy', 'Академия', 'book'], ['/academy/shorts', 'Короткие видео', 'play'], ['coins', 'Коины', 'coin'], ['notifications', 'Уведомления', 'bell'], ['profile', 'Профиль', 'user']],
   user: [['', 'Главная', 'home'], ['requests', 'Мои заявки', 'list'], ['new', 'Получить помощь', 'heart'], ['notifications', 'Уведомления', 'bell'], ['profile', 'Профиль', 'user']],

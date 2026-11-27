@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { initData } from './seed.js';
-import { api } from './api.js';
+import { api, acceptOffer, declineOffer } from './api.js';
+import { startTelegram } from './telegram.js';
 import { seoRoutes, renderHead } from './seo.js';
 import { startDispatcher } from './dispatch.js';
 
@@ -65,6 +66,7 @@ if (DEV) {
 }
 
 startDispatcher(); // автоматическая рассылка заявок помощникам
+startTelegram({ accept: acceptOffer, decline: declineOffer }); // Telegram-бот, если задан TELEGRAM_BOT_TOKEN
 
 server.listen(PORT, HOST, () => {
   console.log(`[socio] ${DEV ? 'dev' : 'production'} — http://localhost:${PORT}`);

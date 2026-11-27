@@ -1,5 +1,6 @@
 // Server-Sent Events: клиенты получают сигнал «данные изменились» и перезагружают их.
 import { all, run } from './db.js';
+import { tgNotify } from './telegram.js';
 
 const clients = new Map(); // userId -> Set<res>
 let publicClients = new Set();
@@ -29,7 +30,9 @@ export function changedAll() {
 }
 
 export async function notify(userId, text, reqId = null) {
-  if (userId) await run('INSERT INTO notifications (user_id,text,req_id,ts) VALUES (?,?,?,?)', userId, text, reqId, Date.now());
+  if (!userId) return;
+  const r = await run('INSERT INTO notifications (user_id,text,req_id,ts) VALUES (?,?,?,?)', userId, text, reqId, Date.now());
+  tgNotify(r.lastInsertRowid); // копия в Telegram, если человек подключил бота
 }
 export async function notifyAdmins(text, reqId = null) {
   for (const { id } of await all(`SELECT id FROM users WHERE role='admin'`)) await notify(id, text, reqId);

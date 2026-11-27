@@ -50,6 +50,7 @@ const routes = [
       { path: 'learning', component: () => import('./views/admin/Learning.vue'), meta: { title: 'Обучение' } },
       { path: 'rewards', component: () => import('./views/admin/Rewards.vue'), meta: { title: 'Награды' } },
       { path: 'admins', component: () => import('./views/admin/Admins.vue'), meta: { title: 'Администраторы' } },
+      { path: 'telegram', component: () => import('./views/admin/Telegram.vue'), meta: { title: 'Telegram-бот' } },
       { path: 'complaints', component: () => import('./views/admin/Complaints.vue'), meta: { title: 'Жалобы' } },
       { path: 'settings', component: Profile, meta: { title: 'Настройки' } },
       { path: 'notifications', component: Notifications, meta: { title: 'Уведомления' } },

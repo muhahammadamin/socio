@@ -8,10 +8,12 @@ import { classifySource, ownHosts } from './source.js';
 import { publicLearnRoutes, adminLearnRoutes } from './learn.js';
 import { addCoins, rewardRoutes, publicRewardRoutes } from './coins.js';
 import { dispatch, offerToHelper, withdrawHelper, closeOffers, offeredTo } from './dispatch.js';
+import { telegramRoutes, telegramAdminRoutes, tgBotName, tgLinked } from './telegram.js';
 import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, DISPATCH, DECLINE_REASONS, nearestDistrict, phoneKey, accountKey, formatPhone, isValidPhone } from '../shared/constants.js';
 
 export const api = express.Router();
 api.use(express.json({ limit: '32kb' }));
+telegramRoutes(api); // webhook Telegram-бота (до проверки входа)
 
 /* ---------- валидация ---------- */
 class Bad extends Error { constructor(m, s = 400) { super(m); this.status = s; } }
@@ -51,6 +53,7 @@ const genPassword = () => crypto.randomBytes(4).toString('hex');
 const pubUser = async (u) => u && ({
   id: u.id, role: u.role, name: u.name, phone: u.phone, dist: u.dist, avail: !!u.avail, balance: u.balance, coins: u.coins,
   google: !!u.google_sub, createdAt: u.created_at,
+  telegram: tgBotName() ? { bot: tgBotName(), linked: await tgLinked(u.phone) } : null,
   ...(u.role === 'user' ? { needs: parseSkills(u.needs) } : {}),
   ...(u.role === 'helper' ? { skills: parseSkills(u.skills), verified: !!u.verified, ...(await helperStats(u)) } : {}),
   ...(u.role === 'student' ? await studentStats(u) : {}),
@@ -397,8 +400,9 @@ api.post('/requests/:id/assign', allow('admin'), wrap(async (req) => {
 }));
 
 /** Помощник сам принимает заявку, которая пришла ему автоматически. Берёт тот, кто успел первым. */
-api.post('/requests/:id/accept', allow('helper'), wrap(async (req) => {
-  const me = req.user, id = Number(req.params.id);
+api.post('/requests/:id/accept', allow('helper'), wrap((req) => acceptOffer(req.user, Number(req.params.id))));
+/** Принять предложенную заявку — с сайта или кнопкой в Telegram. */
+export async function acceptOffer(me, id) {
   const r = await one('SELECT * FROM requests WHERE id=?', id);
   if (!r) throw new Bad('Заявка не найдена — возможно, её отменили.', 404);
   if (r.helper_id === me.id) throw new Bad('Эта заявка уже у вас.', 409);
@@ -420,7 +424,7 @@ api.post('/requests/:id/accept', allow('helper'), wrap(async (req) => {
   });
   await changed([r.user_id, me.id, ...others]);
   return { ok: true };
-}));
+}
 
 api.post('/requests/:id/status', allow('helper'), wrap(async (req) => {
   const r = await getReq(req.params.id, req.user), next = HELPER_TRANSITIONS[r.status];
@@ -444,11 +448,12 @@ api.post('/requests/:id/status', allow('helper'), wrap(async (req) => {
 }));
 
 /** Отказ: от автоматически пришедшей заявки или от назначенной координатором. Заявка сразу уходит другим помощникам. */
-api.post('/requests/:id/decline', allow('helper'), wrap(async (req) => {
-  const me = req.user, id = Number(req.params.id);
+api.post('/requests/:id/decline', allow('helper'), wrap((req) => declineOffer(req.user, Number(req.params.id), req.body?.reason)));
+/** Отказаться от заявки — с сайта или кнопкой в Telegram. */
+export async function declineOffer(me, id, why) {
   const r = await one('SELECT * FROM requests WHERE id=?', id);
   if (!r) throw new Bad('Заявка не найдена — возможно, её отменили.', 404);
-  const reason = Object.hasOwn(DECLINE_REASONS, req.body?.reason) ? req.body.reason : '';
+  const reason = Object.hasOwn(DECLINE_REASONS, why) ? why : '';
   const assigned = r.helper_id === me.id;
   if (assigned && r.status !== 'assigned') throw new Bad('Вы уже приняли заявку — отказаться нельзя. Если что-то случилось, позвоните координатору.');
   if (!assigned && !(await one(`SELECT 1 FROM request_offers WHERE req_id=? AND helper_id=? AND state='open'`, id, me.id)))
@@ -468,7 +473,7 @@ api.post('/requests/:id/decline', allow('helper'), wrap(async (req) => {
   });
   await changed([r.user_id, me.id, ...sent, ...await offeredTo(id)]);
   return { ok: true };
-}));
+}
 
 api.post('/requests/:id/thanks', allow('user'), wrap(async (req) => {
   const r = await getReq(req.params.id, req.user);
@@ -540,6 +545,8 @@ async function sourceStats(from) {
 /* ---------- администраторы ----------
    Главный администратор — тот, чей номер задан в ADMIN_PHONE: его нельзя удалить из панели. */
 const mainAdminKey = () => phoneKey(process.env.ADMIN_PHONE || DEFAULT_ADMIN_PHONE);
+// Telegram-бот: настройки в панели (менять может только главный администратор)
+telegramAdminRoutes(api, { allow, wrap, Bad, isMain: (u) => u?.role === 'admin' && u.phone_key === mainAdminKey() });
 const adminList = async () => (await all(`SELECT id, name, phone, phone_key, created_at FROM users WHERE role='admin' ORDER BY id`))
   .map((a) => ({ id: a.id, name: a.name, phone: a.phone, createdAt: a.created_at, main: a.phone_key === mainAdminKey() }));
 api.post('/admins', allow('admin'), wrap(async (req) => {

@@ -26,6 +26,9 @@ services:
       # Вход через Google: вставьте Client ID в панели Render (Environment) после создания сервиса
       - key: GOOGLE_CLIENT_ID
         sync: false
+      # Telegram-бот: токен от @BotFather. Вставьте в панели Render (Environment) — бот сам подключится через webhook
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
       # Подтверждение сайта в Google Search Console и Яндекс.Вебмастере: вставьте код из мета-тега
       # (только значение content="…"), затем в консоли отправьте sitemap.xml
       - key: GOOGLE_SITE_VERIFICATION
