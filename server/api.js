@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { one, all, run, tx } from './db.js';
 import { authenticate, allow, checkPassword, hashPassword, makeToken, readToken, loginLimiter, countFailure, makeTicket, readTicket, verifyGoogle } from './auth.js';
 import { subscribe, changed, changedAll, notify, notifyAdmins } from './events.js';
-import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser } from './seed.js';
+import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser, isAdminOnlyPhone } from './seed.js';
 import { classifySource, ownHosts } from './source.js';
 import { publicLearnRoutes, adminLearnRoutes } from './learn.js';
 import { addCoins, rewardRoutes, publicRewardRoutes } from './coins.js';
@@ -21,6 +21,12 @@ const phone = (v) => {
   const d = phoneKey(v), full = d.length === 9 ? `998${d}` : d; // 9 цифр без кода страны тоже принимаем
   if (full.length !== 12 || !full.startsWith('998') || !isValidPhone(`+${full}`)) throw new Bad('Введите настоящий номер телефона: +998 и 9 цифр, например +998 90 123 45 67.');
   return formatPhone(`+${full}`);
+};
+// Номер для аккаунта на сайте: номер, закреплённый за панелью управления, не принимается.
+const sitePhone = (v) => {
+  const p = phone(v);
+  if (isAdminOnlyPhone(p)) throw new Bad('Этот номер закреплён за администратором — на сайте с ним зарегистрироваться нельзя. Укажите другой номер.', 409);
+  return p;
 };
 const dist = (v) => { if (!DISTRICT_NAMES.includes(v)) throw new Bad('Выберите район из списка.'); return v; };
 const password = (v) => str(v, 6, 100, 'Пароль — не короче 6 символов.');
@@ -205,7 +211,7 @@ publicRewardRoutes(api, { Bad, wrap });
 
 api.post('/volunteers', wrap(async (req) => {
   const b = req.body || {};
-  const v = { name: str(b.name, 2, 80, 'Введите имя.'), phone: phone(b.phone), dist: dist(b.dist), skills: skills(b.skills), about: str(b.about, 10, 500, 'Расскажите о себе подробнее (от 10 символов).') };
+  const v = { name: str(b.name, 2, 80, 'Введите имя.'), phone: sitePhone(b.phone), dist: dist(b.dist), skills: skills(b.skills), about: str(b.about, 10, 500, 'Расскажите о себе подробнее (от 10 символов).') };
   if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, phoneKey(v.phone))) throw new Bad('С этим номером уже есть аккаунт волонтёра. Войдите в него.', 409);
   if ((await all('SELECT phone FROM volunteers')).some((x) => phoneKey(x.phone) === phoneKey(v.phone))) throw new Bad('Заявка с этим телефоном уже на рассмотрении.', 409);
   await run('INSERT INTO volunteers (name,phone,dist,skills,about,created_at) VALUES (?,?,?,?,?,?)', v.name, v.phone, v.dist, v.skills, v.about, Date.now());
@@ -241,7 +247,7 @@ const SELF_ROLES = ['user', 'student', 'helper'];
 async function createAccount(req, b, google = null) {
   const src = classifySource(b.src, req.get('user-agent'), ownHosts(req));
   const role = SELF_ROLES.includes(b.role) ? b.role : 'user';
-  const name = str(b.name ?? google?.name, 2, 80, 'Введите имя и фамилию.'), ph = phone(b.phone), d = dist(b.dist);
+  const name = str(b.name ?? google?.name, 2, 80, 'Введите имя и фамилию.'), ph = sitePhone(b.phone), d = dist(b.dist);
   const pass = google ? '!google' : hashPassword(password(b.password)); // у Google-аккаунта пароля нет: такой хэш не совпадёт ни с одним паролем
   const school = role === 'student' ? str(b.school, 2, 120, 'Укажите, где вы учитесь.') : '';
   const sk = role === 'helper' ? skills(b.skills) : '[]';
@@ -563,7 +569,7 @@ api.delete('/admins/:id', allow('admin'), wrap(async (req) => {
 
 api.post('/helpers', allow('admin'), wrap(async (req) => {
   const b = req.body || {};
-  const name = str(b.name, 2, 80, 'Введите имя помощника.'), ph = phone(b.phone), d = dist(b.dist), sk = skills(b.skills, false);
+  const name = str(b.name, 2, 80, 'Введите имя помощника.'), ph = sitePhone(b.phone), d = dist(b.dist), sk = skills(b.skills, false);
   if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, phoneKey(ph))) throw new Bad('С этим номером уже есть аккаунт волонтёра.', 409);
   const pw = genPassword();
   const hid = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,source,created_at) VALUES ('helper',?,?,?,?,?,?,'admin',?)`, name, ph, phoneKey(ph), hashPassword(pw), d, sk, Date.now())).lastInsertRowid;

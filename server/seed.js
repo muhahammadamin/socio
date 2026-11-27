@@ -35,6 +35,19 @@ export async function deleteUser(id) {
 
 export const DEFAULT_ADMIN_PHONE = '+998 77-010-25-56';
 
+/** Номера только для панели управления: на сайте с ними нельзя зарегистрироваться,
+ *  а аккаунты сайта (нужна помощь, волонтёр, студент) с ними удаляются при запуске. Администратор остаётся. */
+const ADMIN_ONLY_PHONES = ['+998 77-010-25-56'];
+export const isAdminOnlyPhone = (p) => ADMIN_ONLY_PHONES.some((x) => phoneKey(x) === phoneKey(p));
+async function purgeAdminOnlyPhones() {
+  const keys = ADMIN_ONLY_PHONES.map(phoneKey);
+  for (const u of await all(`SELECT id, role, name FROM users WHERE role!='admin' AND phone_key IN (${keys.map(() => '?').join(',')})`, ...keys)) {
+    await tx(() => deleteUser(u.id));
+    console.log(`[socio] удалён аккаунт сайта «${u.name}» (#${u.id}, ${u.role}) — номер оставлен только администратору`);
+  }
+  for (const v of await all('SELECT id, phone FROM volunteers')) if (isAdminOnlyPhone(v.phone)) await run('DELETE FROM volunteers WHERE id=?', v.id);
+}
+
 /** Освобождённые номера: аккаунты и заявки с ними, созданные до REMOVED_BEFORE, удаляются при запуске.
  *  После этого номер свободен — с ним можно зарегистрироваться заново, новый аккаунт не трогается. */
 const REMOVED_PHONES = ['+998 77-006-73-24'];
@@ -226,6 +239,7 @@ export async function initData() {
   const empty = !(await one('SELECT id FROM users LIMIT 1'));
   if (empty && isDemo()) { await seedDemo(); console.log('[socio] загружены демо-данные'); }
   await purgeRemovedPhones();
+  await purgeAdminOnlyPhones();
   await ensureAdmin();
   await ensureCategories();
   await ensureCourses();
