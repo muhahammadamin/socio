@@ -3,12 +3,12 @@ import crypto from 'node:crypto';
 import { one, all, run, tx } from './db.js';
 import { authenticate, allow, checkPassword, hashPassword, makeToken, readToken, loginLimiter, countFailure, makeTicket, readTicket, verifyGoogle } from './auth.js';
 import { subscribe, changed, changedAll, notify, notifyAdmins } from './events.js';
-import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser, isAdminOnlyPhone } from './seed.js';
+import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser } from './seed.js';
 import { classifySource, ownHosts } from './source.js';
 import { publicLearnRoutes, adminLearnRoutes } from './learn.js';
 import { addCoins, rewardRoutes, publicRewardRoutes } from './coins.js';
 import { dispatch, offerToHelper, withdrawHelper, closeOffers, offeredTo } from './dispatch.js';
-import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, DISPATCH, DECLINE_REASONS, nearestDistrict, phoneKey, formatPhone, isValidPhone } from '../shared/constants.js';
+import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, DISPATCH, DECLINE_REASONS, nearestDistrict, phoneKey, accountKey, formatPhone, isValidPhone } from '../shared/constants.js';
 
 export const api = express.Router();
 api.use(express.json({ limit: '32kb' }));
@@ -21,12 +21,6 @@ const phone = (v) => {
   const d = phoneKey(v), full = d.length === 9 ? `998${d}` : d; // 9 цифр без кода страны тоже принимаем
   if (full.length !== 12 || !full.startsWith('998') || !isValidPhone(`+${full}`)) throw new Bad('Введите настоящий номер телефона: +998 и 9 цифр, например +998 90 123 45 67.');
   return formatPhone(`+${full}`);
-};
-// Номер для аккаунта на сайте: номер, закреплённый за панелью управления, не принимается.
-const sitePhone = (v) => {
-  const p = phone(v);
-  if (isAdminOnlyPhone(p)) throw new Bad('Этот номер закреплён за администратором — на сайте с ним зарегистрироваться нельзя. Укажите другой номер.', 409);
-  return p;
 };
 const dist = (v) => { if (!DISTRICT_NAMES.includes(v)) throw new Bad('Выберите район из списка.'); return v; };
 const password = (v) => str(v, 6, 100, 'Пароль — не короче 6 символов.');
@@ -211,8 +205,8 @@ publicRewardRoutes(api, { Bad, wrap });
 
 api.post('/volunteers', wrap(async (req) => {
   const b = req.body || {};
-  const v = { name: str(b.name, 2, 80, 'Введите имя.'), phone: sitePhone(b.phone), dist: dist(b.dist), skills: skills(b.skills), about: str(b.about, 10, 500, 'Расскажите о себе подробнее (от 10 символов).') };
-  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, phoneKey(v.phone))) throw new Bad('С этим номером уже есть аккаунт волонтёра. Войдите в него.', 409);
+  const v = { name: str(b.name, 2, 80, 'Введите имя.'), phone: phone(b.phone), dist: dist(b.dist), skills: skills(b.skills), about: str(b.about, 10, 500, 'Расскажите о себе подробнее (от 10 символов).') };
+  if (await one(`SELECT id FROM users WHERE phone_key=?`, accountKey(v.phone, 'helper'))) throw new Bad('С этим номером уже есть аккаунт волонтёра. Войдите в него.', 409);
   if ((await all('SELECT phone FROM volunteers')).some((x) => phoneKey(x.phone) === phoneKey(v.phone))) throw new Bad('Заявка с этим телефоном уже на рассмотрении.', 409);
   await run('INSERT INTO volunteers (name,phone,dist,skills,about,created_at) VALUES (?,?,?,?,?,?)', v.name, v.phone, v.dist, v.skills, v.about, Date.now());
   await notifyAdmins(`Новый волонтёр: ${v.name} (${v.dist})`);
@@ -226,7 +220,8 @@ api.post('/volunteers', wrap(async (req) => {
 const ROLE_T = { user: 'Нужна помощь', helper: 'Волонтёр', student: 'Студент' };
 async function login(req, admin) {
   const b = req.body || {};
-  const list = (await all(`SELECT * FROM users WHERE phone_key=? AND role ${admin ? '=' : '!='} 'admin' ORDER BY id`, phoneKey(b.phone)))
+  const keys = admin ? [accountKey(b.phone, 'admin')] : SELF_ROLES.map((r) => accountKey(b.phone, r));
+  const list = (await all(`SELECT * FROM users WHERE phone_key IN (${keys.map(() => '?').join(',')}) AND role ${admin ? '=' : '!='} 'admin' ORDER BY id`, ...keys))
     .filter((u) => checkPassword(b.password, u.pass));
   const pick = b.role ? list.filter((u) => u.role === b.role) : list;
   if (!pick.length) {
@@ -247,14 +242,14 @@ const SELF_ROLES = ['user', 'student', 'helper'];
 async function createAccount(req, b, google = null) {
   const src = classifySource(b.src, req.get('user-agent'), ownHosts(req));
   const role = SELF_ROLES.includes(b.role) ? b.role : 'user';
-  const name = str(b.name ?? google?.name, 2, 80, 'Введите имя и фамилию.'), ph = sitePhone(b.phone), d = dist(b.dist);
+  const name = str(b.name ?? google?.name, 2, 80, 'Введите имя и фамилию.'), ph = phone(b.phone), d = dist(b.dist);
   const pass = google ? '!google' : hashPassword(password(b.password)); // у Google-аккаунта пароля нет: такой хэш не совпадёт ни с одним паролем
   const school = role === 'student' ? str(b.school, 2, 120, 'Укажите, где вы учитесь.') : '';
   const sk = role === 'helper' ? skills(b.skills) : '[]';
   const nd = role === 'user' ? await needs(b.needs) : '[]';
-  if (await one('SELECT id FROM users WHERE phone_key=? AND role=?', phoneKey(ph), role)) throw new Bad(`С этим номером уже есть аккаунт «${ROLE_T[role]}». Войдите в него — или выберите другую роль.`, 409);
+  if (await one('SELECT id FROM users WHERE phone_key=?', accountKey(ph, role))) throw new Bad(`С этим номером уже есть аккаунт «${ROLE_T[role]}». Войдите в него — или выберите другую роль.`, 409);
   const id = Number((await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,school,skills,needs,google_sub,email,verified,source,source_detail,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    role, name, ph, phoneKey(ph), pass, d, school, sk, nd, google?.sub ?? null, google?.email ?? '', role === 'helper' ? 0 : 1, src.source, src.detail, Date.now())).lastInsertRowid);
+    role, name, ph, accountKey(ph, role), pass, d, school, sk, nd, google?.sub ?? null, google?.email ?? '', role === 'helper' ? 0 : 1, src.source, src.detail, Date.now())).lastInsertRowid);
   if (role === 'student') await notifyAdmins(`Новый студент: ${name} (${school})`);
   if (role === 'helper') await notifyAdmins(`Новый волонтёр зарегистрировался: ${name} (${d}). Проверьте его, чтобы назначать заявки.`);
   await changed();
@@ -569,10 +564,10 @@ api.delete('/admins/:id', allow('admin'), wrap(async (req) => {
 
 api.post('/helpers', allow('admin'), wrap(async (req) => {
   const b = req.body || {};
-  const name = str(b.name, 2, 80, 'Введите имя помощника.'), ph = sitePhone(b.phone), d = dist(b.dist), sk = skills(b.skills, false);
-  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, phoneKey(ph))) throw new Bad('С этим номером уже есть аккаунт волонтёра.', 409);
+  const name = str(b.name, 2, 80, 'Введите имя помощника.'), ph = phone(b.phone), d = dist(b.dist), sk = skills(b.skills, false);
+  if (await one(`SELECT id FROM users WHERE phone_key=?`, accountKey(ph, 'helper'))) throw new Bad('С этим номером уже есть аккаунт волонтёра.', 409);
   const pw = genPassword();
-  const hid = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,source,created_at) VALUES ('helper',?,?,?,?,?,?,'admin',?)`, name, ph, phoneKey(ph), hashPassword(pw), d, sk, Date.now())).lastInsertRowid;
+  const hid = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,source,created_at) VALUES ('helper',?,?,?,?,?,?,'admin',?)`, name, ph, accountKey(ph, 'helper'), hashPassword(pw), d, sk, Date.now())).lastInsertRowid;
   await tx(() => offerToHelper(hid));
   await changed();
   return { ok: true, password: pw };
@@ -606,10 +601,10 @@ api.post('/helpers/:id/verify', allow('admin'), wrap(async (req) => {
 api.post('/volunteers/:id/approve', allow('admin'), wrap(async (req) => {
   const v = await one('SELECT * FROM volunteers WHERE id=?', Number(req.params.id));
   if (!v) throw new Bad('Заявка волонтёра не найдена', 404);
-  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, phoneKey(v.phone))) throw new Bad('С этим номером уже есть аккаунт волонтёра.', 409);
+  if (await one(`SELECT id FROM users WHERE phone_key=?`, accountKey(v.phone, 'helper'))) throw new Bad('С этим номером уже есть аккаунт волонтёра.', 409);
   const pw = genPassword();
   await tx(async () => {
-    const id = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,created_at) VALUES ('helper',?,?,?,?,?,?,?)`, v.name, v.phone, phoneKey(v.phone), hashPassword(pw), v.dist, v.skills, Date.now())).lastInsertRowid;
+    const id = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,created_at) VALUES ('helper',?,?,?,?,?,?,?)`, v.name, v.phone, accountKey(v.phone, 'helper'), hashPassword(pw), v.dist, v.skills, Date.now())).lastInsertRowid;
     await run('DELETE FROM volunteers WHERE id=?', v.id);
     await offerToHelper(id);
   });
@@ -657,8 +652,8 @@ api.post('/students/apply', allow('student'), wrap(async (req) => {
 api.post('/students/:id/promote', allow('admin'), wrap(async (req) => {
   const s = await one(`SELECT * FROM users WHERE id=? AND role='student'`, Number(req.params.id));
   if (!s) throw new Bad('Студент не найден', 404);
-  if (await one(`SELECT id FROM users WHERE phone_key=? AND role='helper'`, s.phone_key)) throw new Bad(`У ${s.name} уже есть отдельный аккаунт волонтёра с этим номером — пусть войдёт в него.`, 409);
-  await run(`UPDATE users SET role='helper' WHERE id=?`, s.id);
+  if (await one(`SELECT id FROM users WHERE phone_key=?`, accountKey(s.phone, 'helper'))) throw new Bad(`У ${s.name} уже есть отдельный аккаунт волонтёра с этим номером — пусть войдёт в него.`, 409);
+  await run(`UPDATE users SET role='helper', phone_key=? WHERE id=?`, accountKey(s.phone, 'helper'), s.id);
   await notify(s.id, 'Вы стали помощником! Войдите заново, чтобы открыть кабинет помощника. Коины сохранились.');
   await changed([s.id]);
   return { ok: true };

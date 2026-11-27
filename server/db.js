@@ -235,24 +235,11 @@ await addCol('rewards', 'icon', `TEXT NOT NULL DEFAULT 'gift'`);
 await addCol('reward_codes', 'status', `TEXT NOT NULL DEFAULT 'done'`); // pending — ждёт выдачи координатором
 await addCol('reward_codes', 'note', `TEXT NOT NULL DEFAULT ''`);
 await addCol('reward_codes', 'done_at', 'INTEGER');
-// Раньше номер был уникален на весь сайт. Теперь — в пределах роли: пересоздаём таблицу без старого ограничения.
-if (/phone_key\s+TEXT\s+NOT NULL\s+UNIQUE/i.test((await one(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`)).sql)) {
-  const fresh = usersTable('users_new').match(/^\s{2}([a-z_]+)\s/gm).map((x) => x.trim());
-  const cols = (await all('PRAGMA table_info(users)')).map((c) => c.name).filter((c) => fresh.includes(c)).join(',');
-  // Если пересоздать таблицу не получилось (например, ограничения облачной базы), сайт всё равно запускается:
-  // ошибка пишется в лог, а номер пока остаётся уникальным на весь сайт.
-  try {
-    await db.executeMultiple(`PRAGMA foreign_keys = OFF; BEGIN;
-      DROP TABLE IF EXISTS users_new;
-      ${usersTable('users_new')}
-      INSERT INTO users_new (${cols}) SELECT ${cols} FROM users; DROP TABLE users; ALTER TABLE users_new RENAME TO users;
-      COMMIT; PRAGMA foreign_keys = ON;`);
-    console.log('[socio] номер телефона теперь уникален в пределах роли');
-  } catch (e) {
-    try { await db.execute('ROLLBACK'); } catch { /* транзакции уже нет */ }
-    try { await db.execute('PRAGMA foreign_keys = ON'); } catch { /* не страшно */ }
-    console.error('[socio] МИГРАЦИЯ users НЕ ВЫПОЛНЕНА — один номер пока нельзя использовать в нескольких ролях:', e.message);
-  }
+// Один номер — по аккаунту в каждой роли: у аккаунтов сайта к ключу номера добавляется роль (998901234567:helper).
+// Это обычный UPDATE, без пересоздания таблицы, — работает и в облачной базе. Администраторы остаются с цифрами номера.
+{
+  const r = await run(`UPDATE users SET phone_key = phone_key || ':' || role WHERE role != 'admin' AND instr(phone_key, ':') = 0`);
+  if (r.changes) console.log(`[socio] ключи номеров обновлены (${r.changes}) — один номер теперь работает в каждой роли`);
 }
 // Google-аккаунт тоже можно привязать к аккаунту в каждой роли
 await db.execute('DROP INDEX IF EXISTS idx_users_google');

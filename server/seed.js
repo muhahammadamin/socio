@@ -3,7 +3,7 @@ import { hashPassword } from './auth.js';
 import { ensureCourses } from './courses-seed.js';
 import { ensureLessons } from './lessons-seed.js';
 import { ensureRewards } from './coins.js';
-import { DISTRICTS, STATUSES, phoneKey } from '../shared/constants.js';
+import { DISTRICTS, STATUSES, phoneKey, accountKey } from '../shared/constants.js';
 
 const MIN = 6e4, HOUR = 36e5, DAY = 864e5;
 const ADDR = ['ул. Бунёдкор, 12', 'ул. Фархад, 45', 'ул. Навои, 8', 'массив Хадра, 3', 'ул. Амира Темура, 21', 'ул. Мукими, 17', 'ул. Катартал, 6', 'ул. Кичик Халка Йули, 30'];
@@ -14,7 +14,7 @@ async function addUser(u, passHash) {
   return Number((await run(
     `INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,school,coins,avail,rating_sum,rating_cnt,base_done,base_helped,balance,created_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    u.role, u.name, u.phone, phoneKey(u.phone), passHash, u.dist || '', JSON.stringify(u.skills || []), u.school || '', u.coins || 0, u.avail === false ? 0 : 1,
+    u.role, u.name, u.phone, accountKey(u.phone, u.role), passHash, u.dist || '', JSON.stringify(u.skills || []), u.school || '', u.coins || 0, u.avail === false ? 0 : 1,
     (u.rating || 0) * (u.rcnt || 0), u.rcnt || 0, u.base || 0, u.bp || 0, u.balance || 0, Date.now() - 60 * DAY,
   )).lastInsertRowid);
 }
@@ -35,19 +35,6 @@ export async function deleteUser(id) {
 
 export const DEFAULT_ADMIN_PHONE = '+998 77-010-25-56';
 
-/** Номера только для панели управления: на сайте с ними нельзя зарегистрироваться,
- *  а аккаунты сайта (нужна помощь, волонтёр, студент) с ними удаляются при запуске. Администратор остаётся. */
-const ADMIN_ONLY_PHONES = ['+998 77-010-25-56'];
-export const isAdminOnlyPhone = (p) => ADMIN_ONLY_PHONES.some((x) => phoneKey(x) === phoneKey(p));
-async function purgeAdminOnlyPhones() {
-  const keys = ADMIN_ONLY_PHONES.map(phoneKey);
-  for (const u of await all(`SELECT id, role, name FROM users WHERE role!='admin' AND phone_key IN (${keys.map(() => '?').join(',')})`, ...keys)) {
-    await tx(() => deleteUser(u.id));
-    console.log(`[socio] удалён аккаунт сайта «${u.name}» (#${u.id}, ${u.role}) — номер оставлен только администратору`);
-  }
-  for (const v of await all('SELECT id, phone FROM volunteers')) if (isAdminOnlyPhone(v.phone)) await run('DELETE FROM volunteers WHERE id=?', v.id);
-}
-
 /** Освобождённые номера: аккаунты и заявки с ними, созданные до REMOVED_BEFORE, удаляются при запуске.
  *  После этого номер свободен — с ним можно зарегистрироваться заново, новый аккаунт не трогается. */
 const REMOVED_PHONES = ['+998 77-006-73-24'];
@@ -55,9 +42,8 @@ const REMOVED_BEFORE = Date.parse('2026-11-25T15:20:00Z');
 const isRemovedPhone = (p) => REMOVED_PHONES.some((r) => phoneKey(r) === phoneKey(p));
 
 async function purgeRemovedPhones() {
-  const keys = REMOVED_PHONES.map(phoneKey);
-  for (const u of await all(`SELECT id, role, name, phone_key FROM users WHERE created_at < ? AND phone_key IN (${keys.map(() => '?').join(',')})`, REMOVED_BEFORE, ...keys)) {
-    if (u.phone_key === phoneKey(process.env.ADMIN_PHONE || DEFAULT_ADMIN_PHONE)) continue; // главного администратора не трогаем
+  for (const u of (await all('SELECT id, role, name, phone, phone_key FROM users WHERE created_at < ?', REMOVED_BEFORE)).filter((x) => isRemovedPhone(x.phone))) {
+    if (u.role === 'admin') continue; // администраторов не трогаем
     await tx(() => deleteUser(u.id));
     console.log(`[socio] удалён аккаунт «${u.name}» (#${u.id}, ${u.role}), номер ${u.phone_key} освобождён`);
   }
@@ -239,7 +225,6 @@ export async function initData() {
   const empty = !(await one('SELECT id FROM users LIMIT 1'));
   if (empty && isDemo()) { await seedDemo(); console.log('[socio] загружены демо-данные'); }
   await purgeRemovedPhones();
-  await purgeAdminOnlyPhones();
   await ensureAdmin();
   await ensureCategories();
   await ensureCourses();
