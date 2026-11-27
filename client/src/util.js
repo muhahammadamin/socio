@@ -40,6 +40,12 @@ export function km(helperDist, r) {
   if (!a) return null;
   return Math.max(0.4, Math.hypot(a[0] - r.x, a[1] - r.y) * 0.07).toFixed(1);
 }
+/** Как идёт поиск помощника для новой заявки (stage: 0 — район, 1 — весь город, 2 — координатор). */
+export function searchText(r) {
+  if (r.status !== 'new') return '';
+  if (r.stage >= 2) return 'Подбирает координатор';
+  return r.stage === 1 ? 'Ищем по всему городу' : 'Ищем в районе';
+}
 export const finishedAt = (r) => r.log.length ? r.log[r.log.length - 1].ts : r.ts;
 export const shortDist = (d) => String(d).replace(' район', '');
 export const telHref = (p) => `tel:+${String(p).replace(/\D/g, '')}`;

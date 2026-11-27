@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { S, act, catOf } from '../store.js';
-import { ST, STEPT, ORDER, fdate, ftime, dueText, telHref } from '../util.js';
+import { ST, STEPT, ORDER, fdate, ftime, dueText, telHref, ago, searchText, plural } from '../util.js';
 import Icon from './Icon.vue';
 import Modal from './Modal.vue';
 import CityMap from './CityMap.vue';
@@ -17,6 +17,7 @@ const c = computed(() => catOf(r.value?.cat));
 const idx = computed(() => ORDER.indexOf(r.value?.status));
 const role = computed(() => S.me.role);
 const logOf = (s) => r.value.log.find((x) => x.s === s);
+const OFFER_T = { open: ['ждёт ответа', 'orange'], declined: ['отказался', ''], taken: ['взял', 'green'], missed: ['не успел', ''] };
 
 const stars = ref(5), complaint = ref(''), showComplaint = ref(false), busy = ref(false);
 async function run(fn, ok, close) {
@@ -48,10 +49,24 @@ const sendComplaint = () => run((api) => api.post(`/requests/${r.value.id}/compl
       <dt>Телефон</dt><dd><a :href="telHref(r.phone)">{{ r.phone }}</a></dd>
       <dt>Где</dt><dd>{{ r.dist }}, {{ r.addr }}</dd>
       <dt>Помощник</dt>
-      <dd>{{ r.helperName || 'ещё не назначен' }}<template v-if="r.helperPhone"> · <a :href="telHref(r.helperPhone)">{{ r.helperPhone }}</a></template></dd>
+      <dd>{{ r.helperName || (r.status === 'new' ? 'ищем…' : 'ещё не назначен') }}<template v-if="r.helperPhone"> · <a :href="telHref(r.helperPhone)">{{ r.helperPhone }}</a></template></dd>
       <dt>Срок</dt><dd>{{ r.status === 'done' ? 'выполнена' : dueText(r) }}</dd>
       <template v-if="r.rating"><dt>Оценка</dt><dd style="color:#f5a623">{{ '★'.repeat(r.rating) }}</dd></template>
     </dl>
+    <div v-if="role === 'user' && r.status === 'new'" class="dispatch">
+      <b>{{ searchText(r) }}</b>
+      <p class="note">{{ r.offered ? `Заявку видят ${plural(r.offered, ['помощник', 'помощника', 'помощников'])}. Первый, кто примет её, позвонит вам.` : 'Свободных помощников рядом сейчас нет — координатор подберёт помощника и позвонит.' }}</p>
+    </div>
+    <div v-if="role === 'admin' && r.offers?.length" class="dispatch">
+      <b>Автоматическая рассылка<template v-if="r.status === 'new'"> · {{ searchText(r) }}</template></b>
+      <ul>
+        <li v-for="o in r.offers" :key="o.name + o.ts">
+          <span class="pill" :class="OFFER_T[o.state][1]">{{ OFFER_T[o.state][0] }}</span><b>{{ o.name }}</b>
+          <span class="note">{{ ago(o.ts) }}<template v-if="o.reason"> · {{ o.reason }}</template></span>
+        </li>
+      </ul>
+    </div>
+    <p v-else-if="role === 'admin' && r.status === 'new'" class="note dispatch">Свободных помощников для рассылки не нашлось — назначьте вручную.</p>
     <CityMap :pins="[{ x: r.x, y: r.y, t: r.title, c: `var(${ST[r.status].p})` }]" labels />
 
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">

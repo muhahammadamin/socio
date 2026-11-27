@@ -1,5 +1,5 @@
 <script setup>
-import { fdate } from '../util.js';
+import { fdate, searchText } from '../util.js';
 import { useOpenRequest } from '../composables.js';
 import Icon from './Icon.vue';
 import { StatusPill, CatIcon } from './ui.js';
@@ -13,7 +13,7 @@ const open = useOpenRequest();
     <CatIcon :cat="req.cat" />
     <span class="grow">
       <span class="t">{{ req.title }}</span>
-      <span class="s"><Icon name="clock" />{{ fdate(req.ts) }} · {{ req.helperName || 'помощник ещё не назначен' }}</span>
+      <span class="s"><Icon name="clock" />{{ fdate(req.ts) }} · {{ req.helperName || searchText(req) || 'помощник ещё не назначен' }}</span>
     </span>
     <span v-if="req.status === 'done' && !req.rating" class="pill orange">Оцените</span>
     <StatusPill :status="req.status" />

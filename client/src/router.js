@@ -19,6 +19,8 @@ const routes = [
   { path: '/register/:as(help|volunteer|student)', component: () => import('./views/register/Form.vue'), meta: { title: 'Регистрация', guest: true } },
   // статья о волонтёрстве для поисковиков и новичков
   { path: '/volunteering', component: () => import('./views/Guide.vue'), meta: { title: 'Волонтёрство в Ташкенте' } },
+  // сертификат волонтёра: открыт всем, чтобы работодатель или вуз мог проверить его по номеру
+  { path: '/certificate/:code?', component: () => import('./views/Certificate.vue'), meta: { title: 'Сертификат волонтёра' } },
   { path: '/categories', component: () => import('./views/CategoriesInfo.vue'), meta: { title: 'Направления помощи' } },
   // отдельная страница волонтёров: регистрация сразу в платформу
   { path: '/volunteers', component: () => import('./views/VolunteerPortal.vue'), meta: { title: 'Волонтёрам' } },

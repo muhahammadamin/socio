@@ -20,6 +20,7 @@ async function addUser(u, passHash) {
 
 /** Удаляет пользователя вместе с его заявками, уведомлениями, прогрессом и коинами (не полагаясь на ON DELETE). */
 export async function deleteUser(id) {
+  await run('DELETE FROM request_offers WHERE helper_id=? OR req_id IN (SELECT id FROM requests WHERE user_id=?)', id, id);
   await run('DELETE FROM request_log WHERE req_id IN (SELECT id FROM requests WHERE user_id=?)', id);
   await run('UPDATE complaints SET req_id=NULL WHERE req_id IN (SELECT id FROM requests WHERE user_id=?)', id);
   await run('DELETE FROM requests WHERE user_id=?', id);
@@ -128,7 +129,8 @@ export async function seedDemo() {
   const now = Date.now();
   const demoHash = hashPassword(DEMO_PASSWORD);
   await tx(async () => {
-    for (const t of ['notifications', 'complaints', 'request_log', 'requests', 'volunteers', 'categories', 'coin_log', 'learn_progress']) await run(`DELETE FROM ${t}`);
+    for (const t of ['notifications', 'complaints', 'request_offers', 'request_log', 'requests', 'volunteers', 'categories', 'coin_log', 'learn_progress']) await run(`DELETE FROM ${t}`);
+    await run(`DELETE FROM reward_codes WHERE reward_id IN (SELECT id FROM rewards WHERE kind!='code')`); // выданные сертификаты и заказы
     await run('UPDATE reward_codes SET user_id=NULL, issued_at=NULL');
     await run('DELETE FROM users');
   });
@@ -198,7 +200,7 @@ export async function seedDemo() {
       await run('INSERT INTO complaints (from_id,against_id,text,status,created_at) VALUES (?,?,?,?,?)', U[f], H[a], text, st, now - DAY);
 
     const admin = (await one(`SELECT id FROM users WHERE role='admin' LIMIT 1`)).id;
-    for (const [to, text, ago] of [[H.h1, 'Вам назначена заявка «Помощь с покупкой продуктов»', 2 * MIN], [H.h1, 'Ваш рейтинг обновлён: 4.9', 5 * HOUR],
+    for (const [to, text, ago] of [[H.h1, 'Координатор назначил вам заявку «Помощь с покупкой продуктов»', 2 * MIN], [H.h1, 'Ваш рейтинг обновлён: 4.9', 5 * HOUR],
       [U.u1, 'Заявка «Прогулка с бабушкой» выполнена. Скажите спасибо помощнику', 2 * DAY], [admin, 'Новая заявка «Нужна помощь пожилому человеку»', 5 * MIN],
       [admin, 'Новая заявка «Помощь семье с детьми»', 12 * MIN]])
       await run('INSERT INTO notifications (user_id,text,ts) VALUES (?,?,?)', to, text, now - ago);

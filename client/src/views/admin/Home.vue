@@ -14,6 +14,7 @@ const period = ref(30);
 const L = computed(() => { const lim = period.value === 'all' ? 0 : Date.now() - period.value * DAY; return S.reqs.filter((r) => r.ts >= lim); });
 const done = computed(() => L.value.filter((r) => r.status === 'done').length);
 const fresh = computed(() => L.value.filter((r) => r.status === 'new').length);
+const stuck = computed(() => S.reqs.filter((r) => r.status === 'new' && r.stage >= 2).length);
 const availH = computed(() => S.helpers.filter((h) => h.avail).length);
 const active = computed(() => S.reqs.filter((r) => r.status !== 'done'));
 const recent = computed(() => S.reqs.slice(0, 6));
@@ -31,7 +32,7 @@ const recent = computed(() => S.reqs.slice(0, 6));
     <Tile color="blue" icon="list" label="Всего заявок" :value="L.length" sub="за выбранный период" />
     <Tile color="green" icon="check" label="Выполнено" :value="done" :sub="L.length ? Math.round(done / L.length * 100) + '% от всех' : 'нет заявок'" />
     <Tile color="purple" icon="shield" label="Помощники" :value="S.helpers.length" :sub="availH + ' доступны сейчас'" />
-    <Tile color="orange" icon="bell" label="Новые" :value="fresh" :sub="fresh ? 'ждут назначения' : 'все назначены'" />
+    <Tile color="orange" icon="bell" label="Новые" :value="fresh" :sub="!fresh ? 'все разобраны' : stuck ? `${stuck} ждут вашего назначения` : 'разосланы помощникам'" />
   </div>
   <VisitorsCard />
   <div class="grid3">

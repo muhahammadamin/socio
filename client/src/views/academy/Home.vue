@@ -34,7 +34,7 @@ const thumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
         <div>
           <span class="kicker"><Icon name="book" :size="15" />Платформа для студентов</span>
           <h1>Учитесь <em>помогать</em> правильно</h1>
-          <p>Короткие видео, курсы, тесты и игры: первая помощь, общение с пожилыми, защита от мошенников. За каждый пройденный курс — {{ COINS.courseDone }} коинов, их можно обменять на скидки в Яндекс Такси.</p>
+          <p>Короткие видео, курсы, тесты и игры: первая помощь, общение с пожилыми, защита от мошенников. За каждый пройденный курс — {{ COINS.courseDone }} коинов, их можно обменять на сертификат волонтёра, пополнение связи и мерч.</p>
           <div class="ctas">
             <RouterLink class="btn light lg" to="/academy/shorts"><Icon name="play" :size="18" />Смотреть короткие видео</RouterLink>
             <RouterLink v-if="!me" class="btn ghost lg" to="/register/student">Зарегистрироваться</RouterLink>

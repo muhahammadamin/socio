@@ -101,6 +101,17 @@ CREATE TABLE IF NOT EXISTS request_log (
   ts     INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_log_req ON request_log(req_id);
+-- автоматическая рассылка: кому из помощников предложена заявка и что он ответил
+-- state: open — ждёт ответа, declined — отказался, taken — взял, missed — заявку взял другой
+CREATE TABLE IF NOT EXISTS request_offers (
+  req_id    INTEGER NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+  helper_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  state     TEXT    NOT NULL DEFAULT 'open',
+  reason    TEXT    NOT NULL DEFAULT '',
+  ts        INTEGER NOT NULL,
+  PRIMARY KEY (req_id, helper_id)
+);
+CREATE INDEX IF NOT EXISTS idx_offers_helper ON request_offers(helper_id, state);
 CREATE TABLE IF NOT EXISTS volunteers (
   id         INTEGER PRIMARY KEY,
   name       TEXT NOT NULL,
@@ -211,4 +222,13 @@ await addCol('users', 'source', 'TEXT');
 await addCol('users', 'source_detail', `TEXT NOT NULL DEFAULT ''`);
 await addCol('visitors', 'source', 'TEXT');
 await addCol('visitors', 'source_detail', `TEXT NOT NULL DEFAULT ''`);
+// рассылка заявок: 0 — помощникам района, 1 — всему городу, 2 — передана координатору
+await addCol('requests', 'stage', 'INTEGER NOT NULL DEFAULT 0');
+await addCol('requests', 'stage_ts', 'INTEGER NOT NULL DEFAULT 0');
+// награды: code — промокоды партнёра, cert — сертификат волонтёра (выдаётся сразу), manual — выдаёт координатор
+await addCol('rewards', 'kind', `TEXT NOT NULL DEFAULT 'code'`);
+await addCol('rewards', 'icon', `TEXT NOT NULL DEFAULT 'gift'`);
+await addCol('reward_codes', 'status', `TEXT NOT NULL DEFAULT 'done'`); // pending — ждёт выдачи координатором
+await addCol('reward_codes', 'note', `TEXT NOT NULL DEFAULT ''`);
+await addCol('reward_codes', 'done_at', 'INTEGER');
 await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google ON users(google_sub) WHERE google_sub IS NOT NULL');

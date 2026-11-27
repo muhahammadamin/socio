@@ -25,7 +25,7 @@ const toggleSkill = (k) => {
   const next = cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k];
   act((a) => a.patch(`/helpers/${S.me.id}`, { skills: next }), 'Направления сохранены').catch(() => {});
 };
-const toggleAvail =() => act((a) => a.patch(`/helpers/${S.me.id}`, { avail: !S.me.avail }), S.me.avail ? 'Новые заявки вам назначать не будут' : 'Вы снова принимаете заявки').catch(() => {});
+const toggleAvail =() => act((a) => a.patch(`/helpers/${S.me.id}`, { avail: !S.me.avail }), S.me.avail ? 'Новые заявки приходить не будут' : 'Вы снова получаете заявки рядом с вами').catch(() => {});
 async function reset() {
   if (!confirm('Вернуть все демо-данные к исходным? Текущие заявки будут удалены.')) return;
   busy.value = true;
@@ -44,7 +44,7 @@ async function reset() {
         <div><h2 style="font-size:20px">{{ S.me.name }}</h2><div class="note">{{ S.me.phone }}<template v-if="S.me.dist"> · {{ S.me.dist }}</template></div></div>
       </div>
       <div v-if="role === 'helper'" class="setrow">
-        <div><b>Готов принимать заявки</b><span>Если выключить, администратор не сможет назначить вам новые задания</span></div>
+        <div><b>Готов принимать заявки</b><span>Новые заявки вашего района приходят автоматически. Выключите, если уезжаете или заняты — неотвеченные заявки сразу уйдут другим помощникам</span></div>
         <button class="switch" type="button" role="switch" :aria-checked="S.me.avail" aria-label="Готов принимать заявки" @click="toggleAvail" />
       </div>
       <template v-if="role === 'helper'">

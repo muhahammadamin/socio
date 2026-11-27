@@ -6,8 +6,9 @@ import { subscribe, changed, changedAll, notify, notifyAdmins } from './events.j
 import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser } from './seed.js';
 import { classifySource, ownHosts } from './source.js';
 import { publicLearnRoutes, adminLearnRoutes } from './learn.js';
-import { addCoins, rewardRoutes } from './coins.js';
-import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, nearestDistrict, phoneKey, formatPhone, isValidPhone } from '../shared/constants.js';
+import { addCoins, rewardRoutes, publicRewardRoutes } from './coins.js';
+import { dispatch, offerToHelper, withdrawHelper, closeOffers, offeredTo } from './dispatch.js';
+import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, DISPATCH, DECLINE_REASONS, nearestDistrict, phoneKey, formatPhone, isValidPhone } from '../shared/constants.js';
 
 export const api = express.Router();
 api.use(express.json({ limit: '32kb' }));
@@ -75,13 +76,24 @@ async function shapeRequests(rows, viewer) {
   const logs = await all(`SELECT req_id, status s, ts FROM request_log WHERE req_id IN (${rows.map(() => '?').join(',')}) ORDER BY ts`, ...rows.map((r) => r.id));
   const byReq = new Map();
   for (const l of logs) (byReq.get(l.req_id) || byReq.set(l.req_id, []).get(l.req_id)).push({ s: l.s, ts: l.ts });
+  // кому заявка разослана: администратор видит каждого помощника и причину отказа, человек — сколько её видят
+  const offers = new Map();
+  if (viewer.role !== 'helper') {
+    const o = await all(`SELECT o.req_id, o.state, o.reason, o.ts, u.name FROM request_offers o JOIN users u ON u.id=o.helper_id
+      WHERE o.req_id IN (${rows.map(() => '?').join(',')}) ORDER BY o.ts`, ...rows.map((r) => r.id));
+    for (const x of o) (offers.get(x.req_id) || offers.set(x.req_id, []).get(x.req_id)).push(x);
+  }
   return rows.map((r) => {
+    const of = offers.get(r.id) || [];
+    const offerInfo = viewer.role === 'admin'
+      ? { offers: of.map((x) => ({ name: x.name, state: x.state, reason: DECLINE_REASONS[x.reason] || '', ts: x.ts })) }
+      : viewer.role === 'user' ? { offered: of.filter((x) => x.state === 'open').length } : {};
     const showHelperPhone = viewer.role !== 'user' || ['accepted', 'progress'].includes(r.status);
     return {
       id: r.id, title: r.title, desc: r.descr, cat: r.cat, catId: r.cat_id, dist: r.dist, addr: r.addr, phone: r.phone,
       x: r.x, y: r.y, userId: r.user_id, userName: r.user_name, helperId: r.helper_id, helperName: r.helper_name,
       helperPhone: showHelperPhone ? r.helper_phone : null, status: r.status, due: r.due_days, rating: r.rating,
-      ts: r.created_at, log: byReq.get(r.id) || [],
+      ts: r.created_at, log: byReq.get(r.id) || [], stage: r.stage, stageTs: r.stage_ts, ...offerInfo,
     };
   });
 }
@@ -89,6 +101,17 @@ async function requestsFor(u) {
   if (u.role === 'admin') return await shapeRequests(await all(`${REQ_SQL} ORDER BY r.created_at DESC`), u);
   if (u.role === 'helper') return await shapeRequests(await all(`${REQ_SQL} WHERE r.helper_id=? ORDER BY r.created_at DESC`, u.id), u);
   return await shapeRequests(await all(`${REQ_SQL} WHERE r.user_id=? ORDER BY r.created_at DESC`, u.id), u);
+}
+/** Заявки, которые автоматически предложены помощнику и ждут его ответа. Телефон и точный адрес — только после «Принять». */
+async function offersFor(u) {
+  const rows = await all(`SELECT r.id, r.title, r.descr, r.dist, r.x, r.y, r.due_days, r.created_at, r.stage, c.name cat, u.name user_name, o.ts offered,
+      (SELECT COUNT(*) FROM request_offers x WHERE x.req_id=r.id AND x.state='open') rivals
+    FROM request_offers o JOIN requests r ON r.id=o.req_id JOIN categories c ON c.id=r.cat_id JOIN users u ON u.id=r.user_id
+    WHERE o.helper_id=? AND o.state='open' AND r.status='new' AND r.helper_id IS NULL ORDER BY o.ts DESC`, u.id);
+  return rows.map((r) => ({
+    id: r.id, title: r.title, desc: r.descr, cat: r.cat, dist: r.dist, x: r.x, y: r.y, due: r.due_days, ts: r.created_at,
+    offered: r.offered, userName: String(r.user_name).split(' ')[0], nearby: r.dist === u.dist, rivals: Math.max(0, r.rivals - 1),
+  }));
 }
 async function getReq(id, u) {
   const r = await one(`${REQ_SQL} WHERE r.id=?`, Number(id));
@@ -178,6 +201,7 @@ api.get('/admin-demo', wrap(async () => {
 api.get('/events', async (req, res) => subscribe(req, res, await readToken(req.query.token)));
 
 publicLearnRoutes(api, { Bad, wrap, str });
+publicRewardRoutes(api, { Bad, wrap });
 
 api.post('/volunteers', wrap(async (req) => {
   const b = req.body || {};
@@ -264,6 +288,7 @@ api.get('/bootstrap', wrap(async (req) => {
   const u = req.user;
   const out = {
     me: await pubUser(u), demo: isDemo(), districts: DISTRICTS, categories: await categories(), requests: await requestsFor(u),
+    ...(u.role === 'helper' ? { offers: await offersFor(u) } : {}),
     notifications: (await all('SELECT id, text, req_id reqId, ts, read FROM notifications WHERE user_id=? ORDER BY ts DESC LIMIT 100', u.id)).map((n) => ({ ...n, read: !!n.read })),
   };
   if (u.role === 'admin') {
@@ -283,14 +308,19 @@ api.get('/bootstrap', wrap(async (req) => {
 api.patch('/me', wrap(async (req) => {
   const b = req.body || {}, u = req.user;
   if (b.name !== undefined) await run('UPDATE users SET name=? WHERE id=?', str(b.name, 2, 80, 'Введите имя.'), u.id);
-  if (b.dist !== undefined) await run('UPDATE users SET dist=? WHERE id=?', dist(b.dist), u.id);
+  let touched = [];
+  if (b.dist !== undefined && dist(b.dist) !== u.dist) {
+    await run('UPDATE users SET dist=? WHERE id=?', b.dist, u.id);
+    // помощник переехал: предложения старого района уходят другим, приходят заявки нового
+    if (u.role === 'helper') touched = await tx(async () => { const t = await withdrawHelper(u.id); await offerToHelper(u.id); return t; });
+  }
   if (b.needs !== undefined && u.role === 'user') await run('UPDATE users SET needs=? WHERE id=?', await needs(b.needs), u.id);
   if (b.school !== undefined && u.role === 'student') await run('UPDATE users SET school=? WHERE id=?', str(b.school, 2, 120, 'Укажите, где вы учитесь.'), u.id);
   if (b.newPassword !== undefined) {
     if (!checkPassword(b.oldPassword, u.pass)) throw new Bad('Текущий пароль указан неверно.');
     await run('UPDATE users SET pass=? WHERE id=?', hashPassword(password(b.newPassword)), u.id);
   }
-  await changed([u.id]);
+  await changed([u.id, ...touched]);
   return { ok: true };
 }));
 
@@ -311,24 +341,32 @@ api.post('/requests', allow('user'), wrap(async (req) => {
     const id = Number((await run(`INSERT INTO requests (title,descr,cat_id,dist,addr,phone,x,y,user_id,status,due_days,created_at) VALUES (?,?,?,?,?,?,?,?,?,'new',?,?)`,
       title, desc, cat.id, d, addr, ph, x, y, u.id, due, now)).lastInsertRowid);
     await run(`INSERT INTO request_log (req_id,status,ts) VALUES (?,'new',?)`, id, now);
+    await run('UPDATE requests SET stage_ts=? WHERE id=?', now, id);
     await notifyAdmins(`Новая заявка «${title}» — ${d}`, id);
     return id;
   });
-  await changed([u.id]);
-  return { id };
+  // сразу рассылаем помощникам района (или города, если в районе никого)
+  const { sent } = await tx(() => dispatch(id, now));
+  await notify(u.id, sent.length
+    ? `Заявка «${title}» отправлена помощникам (${sent.length}). Как только кто-то примет её, мы сообщим`
+    : `Заявка «${title}» принята. Свободных помощников сейчас нет — координатор подберёт помощника вручную`, id);
+  await changed([u.id, ...sent]);
+  return { id, sent: sent.length };
 }));
 
 api.delete('/requests/:id', allow('user', 'admin'), wrap(async (req) => {
   const r = await getReq(req.params.id, req.user);
   if (req.user.role === 'user' && r.status !== 'new') throw new Bad('Отменить можно только заявку, которой ещё не назначен помощник.');
+  const offered = await offeredTo(r.id);
   await tx(async () => {
+    await run('DELETE FROM request_offers WHERE req_id=?', r.id);
     await run('DELETE FROM request_log WHERE req_id=?', r.id);
     await run('UPDATE complaints SET req_id=NULL WHERE req_id=?', r.id);
     await run('DELETE FROM requests WHERE id=?', r.id);
   });
   if (req.user.role === 'admin') await notify(r.user_id, `Заявка «${r.title}» отменена администратором`);
   if (r.helper_id) await notify(r.helper_id, `Заявка «${r.title}» отменена`);
-  await changed([r.user_id, r.helper_id]);
+  await changed([r.user_id, r.helper_id, ...offered]);
   return { ok: true };
 }));
 
@@ -340,14 +378,42 @@ api.post('/requests/:id/assign', allow('admin'), wrap(async (req) => {
   if (!h.verified) throw new Bad(`${h.name} ещё не проверен. Проверьте волонтёра в разделе «Волонтёры».`);
   if (!h.avail) throw new Bad(`${h.name} сейчас недоступен.`);
   if (h.id === r.helper_id) return { ok: true };
+  let others = [];
   await tx(async () => {
+    others = await closeOffers(r.id, h.id);
     await run('UPDATE requests SET helper_id=? WHERE id=?', h.id, r.id);
     if (r.status === 'new') await setStatus(r.id, 'assigned');
     if (r.helper_id) await notify(r.helper_id, `Заявка «${r.title}» передана другому помощнику`, r.id);
     await notify(h.id, `Вам назначена заявка «${r.title}»`, r.id);
     await notify(r.user_id, `Для заявки «${r.title}» назначен помощник ${h.name}`, r.id);
   });
-  await changed([r.user_id, h.id, r.helper_id]);
+  await changed([r.user_id, h.id, r.helper_id, ...others]);
+  return { ok: true };
+}));
+
+/** Помощник сам принимает заявку, которая пришла ему автоматически. Берёт тот, кто успел первым. */
+api.post('/requests/:id/accept', allow('helper'), wrap(async (req) => {
+  const me = req.user, id = Number(req.params.id);
+  const r = await one('SELECT * FROM requests WHERE id=?', id);
+  if (!r) throw new Bad('Заявка не найдена — возможно, её отменили.', 404);
+  if (r.helper_id === me.id) throw new Bad('Эта заявка уже у вас.', 409);
+  if (r.status !== 'new' || r.helper_id) throw new Bad('Эту заявку уже взял другой помощник. Спасибо за готовность помочь!', 409);
+  if (!me.verified) throw new Bad('Ваш профиль ещё не проверен координатором.', 403);
+  if (!(await one(`SELECT 1 FROM request_offers WHERE req_id=? AND helper_id=? AND state='open'`, id, me.id))) throw new Bad('Эта заявка вам не предлагалась или вы от неё отказались.', 403);
+  const busy = (await one(`SELECT COUNT(*) n FROM requests WHERE helper_id=? AND status!='done'`, me.id)).n;
+  if (busy >= DISPATCH.maxActive) throw new Bad(`У вас уже ${busy} незавершённые заявки. Завершите одну, чтобы взять новую.`, 409);
+  let others = [];
+  await tx(async () => {
+    // условие в UPDATE защищает от гонки: если двое нажали одновременно, заявка достанется одному
+    const ch = await run(`UPDATE requests SET helper_id=?, status='accepted' WHERE id=? AND status='new' AND helper_id IS NULL`, me.id, id);
+    if (!ch.changes) throw new Bad('Эту заявку уже взял другой помощник. Спасибо за готовность помочь!', 409);
+    const now = Date.now();
+    await run(`INSERT INTO request_log (req_id,status,ts) VALUES (?,'assigned',?),(?,'accepted',?)`, id, now, id, now);
+    others = await closeOffers(id, me.id);
+    await notify(r.user_id, `Помощник ${me.name} принял вашу заявку «${r.title}» и скоро позвонит вам`, id);
+    await notifyAdmins(`${me.name} сам принял заявку «${r.title}» (${r.dist})`, id);
+  });
+  await changed([r.user_id, me.id, ...others]);
   return { ok: true };
 }));
 
@@ -366,19 +432,36 @@ api.post('/requests/:id/status', allow('helper'), wrap(async (req) => {
         await notify(req.user.id, `+${COINS.requestDone} коинов за заявку «${r.title}»`, r.id);
     }
   });
+  // освободилось место — помощник снова получает открытые заявки рядом
+  if (next === 'done') await tx(() => offerToHelper(req.user.id));
   await changed([r.user_id, r.helper_id]);
   return { ok: true };
 }));
 
+/** Отказ: от автоматически пришедшей заявки или от назначенной координатором. Заявка сразу уходит другим помощникам. */
 api.post('/requests/:id/decline', allow('helper'), wrap(async (req) => {
-  const r = await getReq(req.params.id, req.user);
-  if (r.status !== 'assigned') throw new Bad('Отказаться можно только от ещё не принятой заявки.');
+  const me = req.user, id = Number(req.params.id);
+  const r = await one('SELECT * FROM requests WHERE id=?', id);
+  if (!r) throw new Bad('Заявка не найдена — возможно, её отменили.', 404);
+  const reason = Object.hasOwn(DECLINE_REASONS, req.body?.reason) ? req.body.reason : '';
+  const assigned = r.helper_id === me.id;
+  if (assigned && r.status !== 'assigned') throw new Bad('Вы уже приняли заявку — отказаться нельзя. Если что-то случилось, позвоните координатору.');
+  if (!assigned && !(await one(`SELECT 1 FROM request_offers WHERE req_id=? AND helper_id=? AND state='open'`, id, me.id)))
+    throw new Bad('Эта заявка вам больше не предлагается.', 409);
+  let sent = [];
   await tx(async () => {
-    await run(`UPDATE requests SET helper_id=NULL WHERE id=?`, r.id);
-    await setStatus(r.id, 'new');
-    await notifyAdmins(`${req.user.name} отказался от заявки «${r.title}» — нужен другой помощник`, r.id);
+    await run(`INSERT INTO request_offers (req_id,helper_id,state,reason,ts) VALUES (?,?,'declined',?,?)
+      ON CONFLICT(req_id,helper_id) DO UPDATE SET state='declined', reason=excluded.reason`, id, me.id, reason, Date.now());
+    if (assigned) {
+      await run('UPDATE requests SET helper_id=NULL WHERE id=?', id);
+      await setStatus(id, 'new');
+      // те, кому заявка приходила раньше, снова её видят
+      await run(`UPDATE request_offers SET state='open' WHERE req_id=? AND state='missed'`, id);
+      await notifyAdmins(`${me.name} отказался от назначенной заявки «${r.title}»${reason ? ` (${DECLINE_REASONS[reason].toLowerCase()})` : ''} — она снова разослана помощникам`, id);
+    }
+    sent = (await dispatch(id)).sent;
   });
-  await changed([r.user_id, req.user.id]);
+  await changed([r.user_id, me.id, ...sent, ...await offeredTo(id)]);
   return { ok: true };
 }));
 
@@ -479,7 +562,8 @@ api.post('/helpers', allow('admin'), wrap(async (req) => {
   const name = str(b.name, 2, 80, 'Введите имя помощника.'), ph = phone(b.phone), d = dist(b.dist), sk = skills(b.skills, false);
   if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(ph))) throw new Bad('Этот телефон уже зарегистрирован.', 409);
   const pw = genPassword();
-  await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,source,created_at) VALUES ('helper',?,?,?,?,?,?,'admin',?)`, name, ph, phoneKey(ph), hashPassword(pw), d, sk, Date.now());
+  const hid = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,source,created_at) VALUES ('helper',?,?,?,?,?,?,'admin',?)`, name, ph, phoneKey(ph), hashPassword(pw), d, sk, Date.now())).lastInsertRowid;
+  await tx(() => offerToHelper(hid));
   await changed();
   return { ok: true, password: pw };
 }));
@@ -488,9 +572,14 @@ api.patch('/helpers/:id', allow('admin', 'helper'), wrap(async (req) => {
   if (req.user.role === 'helper' && req.user.id !== id) throw new Bad('Недостаточно прав', 403);
   const h = await one(`SELECT * FROM users WHERE id=? AND role='helper'`, id);
   if (!h) throw new Bad('Помощник не найден', 404);
-  if (typeof req.body?.avail === 'boolean') await run('UPDATE users SET avail=? WHERE id=?', req.body.avail ? 1 : 0, id);
+  let touched = [];
+  if (typeof req.body?.avail === 'boolean' && req.body.avail !== !!h.avail) {
+    await run('UPDATE users SET avail=? WHERE id=?', req.body.avail ? 1 : 0, id);
+    // перестал принимать — его неотвеченные заявки уходят другим; снова принимает — получает открытые заявки рядом
+    if (req.body.avail) await tx(() => offerToHelper(id)); else touched = await tx(() => withdrawHelper(id));
+  }
   if (req.body?.skills !== undefined) await run('UPDATE users SET skills=? WHERE id=?', skills(req.body.skills, false), id);
-  await changed([id]);
+  await changed([id, ...touched]);
   return { ok: true };
 }));
 
@@ -499,7 +588,8 @@ api.post('/helpers/:id/verify', allow('admin'), wrap(async (req) => {
   const h = await one(`SELECT * FROM users WHERE id=? AND role='helper'`, Number(req.params.id));
   if (!h) throw new Bad('Помощник не найден', 404);
   await run('UPDATE users SET verified=1 WHERE id=?', h.id);
-  await notify(h.id, 'Координатор проверил ваш профиль — теперь вам можно назначать заявки!');
+  await notify(h.id, 'Координатор проверил ваш профиль — теперь заявки рядом с вами будут приходить автоматически!');
+  await tx(() => offerToHelper(h.id));
   await changed([h.id]);
   return { ok: true };
 }));
@@ -509,8 +599,9 @@ api.post('/volunteers/:id/approve', allow('admin'), wrap(async (req) => {
   if (await one('SELECT id FROM users WHERE phone_key=?', phoneKey(v.phone))) throw new Bad('Этот телефон уже зарегистрирован.', 409);
   const pw = genPassword();
   await tx(async () => {
-    await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,created_at) VALUES ('helper',?,?,?,?,?,?,?)`, v.name, v.phone, phoneKey(v.phone), hashPassword(pw), v.dist, v.skills, Date.now());
+    const id = (await run(`INSERT INTO users (role,name,phone,phone_key,pass,dist,skills,created_at) VALUES ('helper',?,?,?,?,?,?,?)`, v.name, v.phone, phoneKey(v.phone), hashPassword(pw), v.dist, v.skills, Date.now())).lastInsertRowid;
     await run('DELETE FROM volunteers WHERE id=?', v.id);
+    await offerToHelper(id);
   });
   await changed();
   return { ok: true, password: pw, phone: v.phone, name: v.name };

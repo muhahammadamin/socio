@@ -23,7 +23,7 @@ const b = computed(() => BRAND[role.value]);
 const home = computed(() => HOME[role.value]);
 // главная активна только на точном адресе, остальные — и на вложенных страницах
 const active = (to) => (to === home.value ? route.path === to : route.path === to || route.path.startsWith(`${to}/`));
-const badge = (to) => (to === '/helper/tasks' ? S.reqs.filter((r) => r.status === 'assigned').length : 0);
+const badge = (to) => (to === '/helper/tasks' ? S.offers.length + S.reqs.filter((r) => r.status === 'assigned').length : 0);
 
 const menu = ref(false), menuEl = ref(null);
 const onDoc = (e) => { if (menu.value && !menuEl.value?.contains(e.target)) menu.value = false; };

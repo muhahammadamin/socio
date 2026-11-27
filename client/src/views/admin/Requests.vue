@@ -1,8 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { S } from '../../store.js';
-import { ST, ORDER, ago } from '../../util.js';
+import { ST, ORDER, ago, searchText } from '../../util.js';
 import { useOpenRequest } from '../../composables.js';
+import { DISPATCH } from '@shared/constants.js';
 import HelperSelect from '../../components/HelperSelect.vue';
 import { PageHead, StatusPill, CatIcon, Empty } from '../../components/ui.js';
 
@@ -15,7 +16,7 @@ const chips = computed(() => [['all', 'Все', S.reqs.length], ...ORDER.map((s)
 </script>
 
 <template>
-  <PageHead title="Все заявки" sub="Назначьте помощника на новую заявку — он увидит её у себя сразу." />
+  <PageHead title="Все заявки" :sub="`Новые заявки сами уходят помощникам района, через ${DISPATCH.widenMin} минут без ответа — всему городу. Если и тогда никто не взял, заявка помечается красным — назначьте помощника вручную.`" />
   <p v-if="q" class="note" style="margin:-6px 0 12px">Поиск: «{{ S.q }}» · <button class="link" type="button" @click="S.q = ''">сбросить</button></p>
   <div class="chips" role="group" aria-label="Фильтр по статусу">
     <button v-for="c in chips" :key="c[0]" class="chip" type="button" :aria-pressed="filter === c[0]" @click="filter = c[0]">{{ c[1] }} <span class="num">{{ c[2] }}</span></button>
@@ -30,7 +31,8 @@ const chips = computed(() => [['all', 'Все', S.reqs.length], ...ORDER.map((s)
             <td>{{ r.dist }}</td>
             <td><span style="display:inline-flex;gap:8px;align-items:center"><CatIcon :cat="r.cat" />{{ r.cat }}</span></td>
             <td>{{ ago(r.ts) }}</td>
-            <td><StatusPill :status="r.status" /></td>
+            <td><StatusPill :status="r.status" />
+              <div v-if="r.status === 'new'" class="note" :style="r.stage >= 2 ? 'color:var(--crit);font-weight:700' : ''">{{ searchText(r) }} · {{ r.offers.filter((o) => o.state === 'open').length }} видят, {{ r.offers.filter((o) => o.state === 'declined').length }} отказ.</div></td>
             <td><HelperSelect :req="r" /></td>
           </tr>
         </tbody>

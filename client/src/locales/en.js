@@ -33,7 +33,7 @@ export default {
     howLead: 'Four steps from a request to help. You can follow the request status in your account in real time.',
     steps: [
       ['Submit a request', 'Describe the help you need and mark the place on the map. It takes a couple of minutes.'],
-      ['We find a helper', 'A coordinator assigns a verified volunteer from your district.'],
+      ['Your request goes straight to helpers', 'Verified volunteers in your district get it automatically — the first one free accepts it.'],
       ['The helper contacts you', 'They call, clarify the details and come at a convenient time.'],
       ['Say thank you', 'Rate the help — this grows the “kindness balance” and trust in helpers.'],
     ],
@@ -77,7 +77,7 @@ export default {
       lead: 'You get a helper account right away. A coordinator will call, confirm your profile — and you will start receiving requests.',
       button: 'Become a helper',
       after: 'your helper dashboard',
-      perks: [`+${COINS.requestDone} coins for every request`, 'Coins → Yandex Taxi discounts', 'Requests only in your district', 'Free courses and videos'],
+      perks: [`+${COINS.requestDone} coins for every request`, 'Coins → certificate, mobile top-up, merch', 'Requests only in your district', 'Free courses and videos'],
     },
     student: {
       title: 'I am a student',
@@ -187,9 +187,9 @@ export default {
     howTitle: 'How it works',
     steps: [
       ['Sign up', 'Get a helper dashboard right away: requests, map, coins, training courses.'],
-      ['Meet a coordinator', 'A coordinator will call, get to know you and confirm your profile. After that you start getting requests.'],
-      ['Help close to home', 'Requests are matched to your district and skills. Accept only the ones that suit you.'],
-      ['Earn coins', `+${COINS.requestDone} for every request plus a bonus for ratings. Coins are exchanged for Yandex Taxi discounts.`],
+      ['Meet a coordinator', 'A coordinator will call, get to know you and confirm your profile. After that, requests near you arrive automatically.'],
+      ['Help close to home', 'New requests in your district arrive on their own, with a sound alert. Tap “Accept” or “Decline” — it is your call.'],
+      ['Earn coins', `+${COINS.requestDone} for every request plus a bonus for ratings. Coins are exchanged for a volunteer certificate, mobile top-ups, a recommendation letter and merch.`],
     ],
     faqTitle: 'Frequently asked questions',
     faq: [
@@ -211,7 +211,7 @@ export default {
     steps: [
       ['Choose a category', 'If unsure, choose “Other” and describe the situation in your own words.'],
       ['Describe what you need', 'What to do, where and when. The more detail, the faster we find a helper.'],
-      ['Wait for a call', 'A coordinator assigns a helper from your district, who calls you to agree on a time.'],
+      ['Wait for a call', 'Helpers in your district get your request right away. Whoever accepts it calls you to agree on a time.'],
     ],
     rulesTitle: 'Good to know',
     rules: [

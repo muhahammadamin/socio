@@ -678,3 +678,44 @@ input,select,textarea{transition:border-color .15s,box-shadow .15s}
 /* узкие экраны: шапка с переключателем языка помещается в ширину телефона */
 @media (max-width:520px){.sitebar .in{gap:8px;padding:10px 16px}.sitebar .logo small{display:none}.sitebar .act{gap:6px}.sitebar .act .btn{padding-inline:12px}}
 @media (max-width:420px){.sitebar .logo strong{display:none}.langsw button{padding:6px 7px;font-size:11.5px}}
+
+/* ---------- входящие заявки помощника ---------- */
+.offers.has{box-shadow:var(--shadow),inset 0 0 0 2px color-mix(in srgb,var(--p-green) 55%,transparent)}
+.offers .ch h2{display:flex;align-items:center;gap:8px}
+.badge.inl{position:static;display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--p-green);color:#fff;font-size:12px;font-weight:800}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--s-gray,#9aa)}
+.live.on i{background:var(--p-green);box-shadow:0 0 0 0 color-mix(in srgb,var(--p-green) 60%,transparent);animation:livepulse 1.8s infinite}
+@keyframes livepulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.offer .otop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.offer .otop h3{margin-right:auto}
+.offer.urgent .big{outline:2px solid var(--p-orange);outline-offset:2px}
+.offer .note{display:flex;gap:6px;align-items:flex-start;margin-top:6px}
+.declwrap{position:relative;display:inline-flex}
+.declmenu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;min-width:210px;background:var(--surface);border-radius:12px;box-shadow:var(--shadow),0 0 0 1px var(--line);padding:6px;display:flex;flex-direction:column}
+.declmenu small{padding:6px 10px;color:var(--muted);font-weight:700}
+.declmenu button{background:none;border:0;text-align:left;padding:9px 10px;border-radius:8px;font:inherit;font-weight:600;color:var(--ink);cursor:pointer}
+.declmenu button:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.dispatch{margin:12px 0;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.dispatch ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:13px}
+.dispatch li{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media print{.rhead,.footer,.noprint{display:none!important}.cert{box-shadow:none!important;margin:0!important}}
+
+/* ---------- сертификат ---------- */
+.cert{max-width:820px;margin:0 auto;padding:40px 44px;position:relative;border:2px solid color-mix(in srgb,var(--accent) 35%,transparent);background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 6%,var(--surface)),var(--surface) 45%)}
+.cert-top{display:flex;align-items:center;gap:12px}
+.cert-top small{display:block;color:var(--muted);font-size:12px}
+.cert-logo svg{width:40px;height:36px}
+.cert-no{margin-left:auto;font-weight:800;font-size:13px;color:var(--muted);letter-spacing:.04em}
+.cert-k{margin-top:30px;text-transform:uppercase;letter-spacing:.3em;font-weight:800;color:var(--accent);font-size:13px}
+.cert h1{font-size:40px;line-height:1.1;margin:8px 0 4px}
+.cert-role{font-weight:700;color:var(--muted)}
+.cert-lead{margin:18px 0 22px;max-width:600px;font-size:15px}
+.cert-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.cert-stats div{border-radius:14px;padding:14px;background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.cert-stats b{display:block;font-size:28px}
+.cert-stats span{color:var(--muted);font-size:13px;font-weight:600}
+.cert-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:28px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.cert-seal{display:inline-flex;align-items:center;gap:8px;font-weight:800;color:var(--s-green);border:2px solid currentColor;border-radius:99px;padding:8px 16px}
+.cert-verify{margin-top:14px;font-size:11.5px;word-break:break-all}
+@media (max-width:520px){.cert{padding:24px 20px}.cert h1{font-size:30px}}

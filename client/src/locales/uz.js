@@ -34,7 +34,7 @@ export default {
     howLead: 'Iltimosdan yordamgacha toʻrt qadam. Ariza holati shaxsiy kabinetda real vaqtda koʻrinadi.',
     steps: [
       ['Ariza qoldiring', 'Qanday yordam kerakligini yozing va xaritada joyni belgilang. Bu bir necha daqiqa oladi.'],
-      ['Yordamchi tanlaymiz', 'Koordinator tumaningizdan tekshirilgan volontyorni tayinlaydi.'],
+      ['Ariza darhol yordamchilarga boradi', 'Uni tumaningizdagi tekshirilgan volontyorlar avtomatik oladi — birinchi boʻsh yordamchi qabul qiladi.'],
       ['Yordamchi siz bilan bogʻlanadi', 'U qoʻngʻiroq qiladi, tafsilotlarni aniqlaydi va qulay vaqtda keladi.'],
       ['Rahmat ayting', 'Yordamni baholang — shu tariqa «ezgulik balansi» va yordamchilarga ishonch oshadi.'],
     ],
@@ -78,7 +78,7 @@ export default {
       lead: 'Darhol yordamchi kabinetini olasiz. Koordinator qoʻngʻiroq qilib, profilni tasdiqlaydi — va siz arizalar ola boshlaysiz.',
       button: 'Yordamchi boʻlish',
       after: 'yordamchi kabinetiga',
-      perks: [`Har bir ariza uchun +${COINS.requestDone} koin`, 'Koinlar → Yandex Taxi chegirmalari', 'Faqat tumaningizdagi arizalar', 'Bepul kurslar va videolar'],
+      perks: [`Har bir ariza uchun +${COINS.requestDone} koin`, 'Koinlar → sertifikat, aloqa, merch', 'Faqat tumaningizdagi arizalar', 'Bepul kurslar va videolar'],
     },
     student: {
       title: 'Men talabaman',
@@ -188,9 +188,9 @@ export default {
     howTitle: 'Qanday ishlaydi',
     steps: [
       ['Roʻyxatdan oʻting', 'Darhol yordamchi kabinetini olasiz: arizalar, xarita, koinlar, oʻquv kurslari.'],
-      ['Koordinator bilan tanishuv', 'Koordinator qoʻngʻiroq qilib tanishadi va profilni tasdiqlaydi. Shundan soʻng sizga arizalar tayinlana boshlaydi.'],
-      ['Uyingiz yaqinida yordam bering', 'Arizalar tumaningiz va yoʻnalishlaringiz boʻyicha tanlanadi. Faqat qulaylarini qabul qiling.'],
-      ['Koin oling', `Har bir ariza uchun +${COINS.requestDone} va baho uchun bonus. Koinlar Yandex Taxi chegirmalariga almashtiriladi.`],
+      ['Koordinator bilan tanishuv', 'Koordinator qoʻngʻiroq qilib tanishadi va profilni tasdiqlaydi. Shundan soʻng yoningizdagi arizalar avtomatik kela boshlaydi.'],
+      ['Uyingiz yaqinida yordam bering', 'Tumaningizdagi yangi arizalar ovozli signal bilan oʻzi keladi. «Qabul qilish» yoki «Rad etish»ni bosing — qaror sizda.'],
+      ['Koin oling', `Har bir ariza uchun +${COINS.requestDone} va baho uchun bonus. Koinlar volontyor sertifikati, telefon balansini toʻldirish, tavsiyanoma va merchga almashtiriladi.`],
     ],
     faqTitle: 'Koʻp beriladigan savollar',
     faq: [
@@ -212,7 +212,7 @@ export default {
     steps: [
       ['Yoʻnalishni tanlang', 'Ishonchingiz komil boʻlmasa — «Boshqa»ni tanlang va vaziyatni oʻz soʻzlaringiz bilan yozing.'],
       ['Nima kerakligini yozing', 'Nima qilish kerak, qayerda va qachon. Qanchalik batafsil boʻlsa, yordamchini shunchalik tez topamiz.'],
-      ['Qoʻngʻiroqni kuting', 'Koordinator tumaningizdan yordamchi tayinlaydi, u qoʻngʻiroq qilib vaqtni kelishib oladi.'],
+      ['Qoʻngʻiroqni kuting', 'Arizangizni tumaningizdagi yordamchilar darhol oladi. Uni qabul qilgan yordamchi qoʻngʻiroq qilib vaqtni kelishib oladi.'],
     ],
     rulesTitle: 'Bilish muhim',
     rules: [

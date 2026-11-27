@@ -22,7 +22,7 @@ async function submit() {
   err.value = '';
   busy.value = true;
   try {
-    await act((api) => api.post('/requests', f), 'Заявка отправлена. Координатор скоро назначит помощника');
+    await act((api) => api.post('/requests', f), (r) => r.sent ? `Заявка отправлена помощникам рядом (${r.sent}). Ждите звонка` : 'Заявка отправлена. Координатор подберёт помощника');
     router.push('/app/requests');
   } catch (e) { err.value = e.message; }
   finally { busy.value = false; }

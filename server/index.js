@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { initData } from './seed.js';
 import { api } from './api.js';
 import { seoRoutes, renderHead } from './seo.js';
+import { startDispatcher } from './dispatch.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEV = process.argv.includes('--dev') || process.env.NODE_ENV === 'development';
@@ -62,6 +63,8 @@ if (DEV) {
     res.set('Cache-Control', 'no-cache').type('html').send(renderHead(indexHtml, req));
   });
 }
+
+startDispatcher(); // автоматическая рассылка заявок помощникам
 
 server.listen(PORT, HOST, () => {
   console.log(`[socio] ${DEV ? 'dev' : 'production'} — http://localhost:${PORT}`);

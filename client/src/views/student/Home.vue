@@ -58,8 +58,8 @@ async function apply() {
 
     <div class="stack">
       <RouterLink class="banner" to="/student/coins" style="text-decoration:none">
-        <Icon name="car" />
-        <div><b>Обменяйте коины на скидку в Яндекс Такси</b><span>Скидки 10–30% на поездку. У вас {{ S.me.coins }} коинов.</span></div>
+        <Icon name="trophy" />
+        <div><b>Обменяйте коины на награды</b><span>Сертификат волонтёра для резюме, пополнение связи, мерч. У вас {{ S.me.coins }} коинов.</span></div>
       </RouterLink>
       <div class="card">
         <div class="ch"><h2>Хотите помогать людям?</h2></div>
