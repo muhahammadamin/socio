@@ -77,7 +77,7 @@ export function tgNotify(noteId) {
   setTimeout(() => attempt(1), 700);
 }
 async function deliver(noteId) {
-  const n = await first(`SELECT n.text, n.req_id, u.id uid, u.role, u.phone FROM notifications n JOIN users u ON u.id=n.user_id WHERE n.id=?`, noteId);
+  const n = await first(`SELECT n.text, n.req_id, n.link, u.id uid, u.role, u.phone FROM notifications n JOIN users u ON u.id=n.user_id WHERE n.id=?`, noteId);
   if (!n) return false; // транзакция ещё идёт или откатилась
   if (!active() || !cfg.roles[n.role]) return true;
   const digits = phoneKey(n.phone);
@@ -85,7 +85,7 @@ async function deliver(noteId) {
   if (!chats.length) return true;
   const many = (await accountsOf(digits)).filter((u) => cfg.roles[u.role]).length > 1;
   let text = (many ? `«${ROLE_T[n.role]}» · ` : '') + n.text;
-  let markup = kb(siteBtn(HOME[n.role]));
+  let markup = kb(n.link ? siteBtn(n.link, /campaign-/.test(n.link) && n.role !== 'admin' ? '📝 Открыть анкету' : 'Открыть на сайте') : siteBtn(HOME[n.role]));
   if (n.role === 'helper' && n.req_id && await first(`SELECT 1 FROM request_offers WHERE req_id=? AND helper_id=? AND state='open'`, n.req_id, n.uid)) {
     const r = await first('SELECT * FROM requests WHERE id=?', n.req_id);
     if (r) {

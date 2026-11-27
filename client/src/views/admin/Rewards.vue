@@ -14,7 +14,10 @@ const f = reactive({ kind: 'manual', icon: 'gift', title: '', cost: 100, partner
 const codesFor = ref(null), codes = ref('');
 
 const load = () => api.get('/rewards').then((d) => { data.value = d; }).catch((e) => toast(e.message, true));
-onMounted(load);
+// данные организации, которые печатаются на сертификате
+const org = reactive({ name: 'Socio', address: '', phone: '', site: '', envSite: '' });
+onMounted(() => { load(); api.get('/admin/org').then((o) => Object.assign(org, o)).catch(() => {}); });
+const saveOrg = () => run(() => api.put('/admin/org', org), 'Данные сертификата сохранены').then((o) => Object.assign(org, o)).catch(() => {});
 async function run(fn, ok) {
   busy.value = true;
   try { const r = await fn(); if (ok) toast(typeof ok === 'function' ? ok(r) : ok); await load(); return r; }
@@ -85,6 +88,21 @@ const addCodes = (r) => run(() => api.post(`/rewards/${r.id}/codes`, { codes: co
     </div>
 
     <div class="stack">
+      <form class="card fcol" novalidate @submit.prevent="saveOrg">
+        <h2>Данные на сертификате</h2>
+        <p class="note">Печатаются в шапке каждого сертификата — и уже выданных тоже. Укажите настоящий адрес, чтобы работодатель или вуз мог с вами связаться.</p>
+        <div class="two">
+          <label class="f">Организация<input v-model="org.name" type="text" maxlength="80" placeholder="Socio"></label>
+          <label class="f">Телефон для справок<input v-model="org.phone" type="text" maxlength="40" placeholder="+998 77 010 25 56"></label>
+        </div>
+        <label class="f">Адрес<input v-model="org.address" type="text" maxlength="200" placeholder="г. Ташкент, Юнусабадский район, ул. …, дом …"></label>
+        <label class="f">Адрес сайта для проверки <span class="note">{{ org.envSite ? `по умолчанию ${org.envSite}` : 'пусто — адрес, с которого открыта страница' }}</span>
+          <input v-model="org.site" type="text" maxlength="200" :placeholder="org.envSite || 'https://socio.uz'"></label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" :disabled="busy"><Icon name="check" />Сохранить</button>
+          <RouterLink v-if="data?.recent?.find((x) => /^SC-/.test(x.code))" class="btn ghost" :to="`/certificate/${data.recent.find((x) => /^SC-/.test(x.code)).code}`" target="_blank">Посмотреть сертификат</RouterLink>
+        </div>
+      </form>
       <form class="card fcol" novalidate @submit.prevent="create">
         <h2>Новая награда</h2>
         <div class="two">

@@ -7,6 +7,7 @@ import Icon from '../../components/Icon.vue';
 import CityMap from '../../components/CityMap.vue';
 import TaskCard from '../../components/TaskCard.vue';
 import OffersBlock from '../../components/OffersBlock.vue';
+import CampaignsBlock from '../../components/CampaignsBlock.vue';
 import { PageHead, Tile, Empty } from '../../components/ui.js';
 
 const open = useOpenRequest();
@@ -28,6 +29,7 @@ const done = computed(() => S.reqs.filter((r) => r.status === 'done').sort((a, b
     <RouterLink to="/helper/coins" style="text-decoration:none;color:inherit"><Tile color="orange" icon="coin" label="Коины" :value="S.me.coins" sub="сертификат, связь, мерч →" /></RouterLink>
   </div>
   <OffersBlock style="margin-bottom:16px" />
+  <CampaignsBlock style="margin-bottom:16px" />
   <div class="grid2">
     <div class="card">
       <div class="ch"><h2>Мои текущие заявки</h2><RouterLink class="link" to="/helper/tasks">Все заявки <Icon name="arrow" /></RouterLink></div>

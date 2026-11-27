@@ -12,6 +12,8 @@ export const S = reactive({
   districts: {},
   cats: [],
   reqs: [],
+  campaigns: [], // наборы волонтёров под проекты компаний (помощник и студент)
+  companiesNew: 0, // администратору: заявки компаний, которые ждут звонка
   offers: [], // заявки, которые автоматически пришли помощнику и ждут «Принять» или «Отказаться»
   notes: [],
   helpers: [],
@@ -50,7 +52,7 @@ export async function load() {
   const d = await api.get('/bootstrap');
   announceOffers(d.offers || [], d.me);
   Object.assign(S, {
-    me: d.me, demo: d.demo, districts: d.districts, cats: d.categories, reqs: d.requests, offers: d.offers || [], notes: d.notifications,
+    me: d.me, demo: d.demo, districts: d.districts, cats: d.categories, reqs: d.requests, offers: d.offers || [], campaigns: d.campaigns || [], companiesNew: d.companiesNew || 0, notes: d.notifications,
     helpers: d.helpers || [], users: d.users || [], vols: d.volunteers || [], students: d.students || [], complaints: d.complaints || [], admins: d.admins || [], loaded: true,
   });
   connectLive();
@@ -80,7 +82,7 @@ export function signOut() {
   localStorage.removeItem(TOKEN);
   disconnectLive();
   seenOffers = null;
-  Object.assign(S, { token: null, me: null, loaded: false, reqs: [], offers: [], notes: [], helpers: [], users: [], vols: [], students: [], complaints: [], admins: [], q: '', mapOpen: false });
+  Object.assign(S, { token: null, me: null, loaded: false, reqs: [], offers: [], campaigns: [], companiesNew: 0, notes: [], helpers: [], users: [], vols: [], students: [], complaints: [], admins: [], q: '', mapOpen: false });
 }
 
 /* ---------- живые обновления (Server-Sent Events) ---------- */

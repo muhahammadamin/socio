@@ -200,6 +200,46 @@ CREATE TABLE IF NOT EXISTS visitors (
   first_ts INTEGER NOT NULL,
   last_ts  INTEGER NOT NULL
 );
+-- компании, которые просят волонтёров, и наборы волонтёров под их задачи
+CREATE TABLE IF NOT EXISTS company_requests (
+  id         INTEGER PRIMARY KEY,
+  company    TEXT    NOT NULL,
+  contact    TEXT    NOT NULL,
+  phone      TEXT    NOT NULL,
+  email      TEXT    NOT NULL DEFAULT '',
+  task       TEXT    NOT NULL,
+  dist       TEXT    NOT NULL DEFAULT '',
+  place      TEXT    NOT NULL DEFAULT '',
+  when_text  TEXT    NOT NULL DEFAULT '',
+  people     INTEGER NOT NULL DEFAULT 1,
+  -- new — ждёт звонка, contacted — связались, recruiting — идёт набор, done — проведено, rejected — отказано
+  status     TEXT    NOT NULL DEFAULT 'new',
+  note       TEXT    NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS campaigns (
+  id         INTEGER PRIMARY KEY,
+  company_id INTEGER REFERENCES company_requests(id) ON DELETE SET NULL,
+  title      TEXT    NOT NULL,
+  company    TEXT    NOT NULL,
+  descr      TEXT    NOT NULL,
+  dist       TEXT    NOT NULL DEFAULT '',
+  place      TEXT    NOT NULL DEFAULT '',
+  when_text  TEXT    NOT NULL,
+  needed     INTEGER NOT NULL DEFAULT 1,
+  status     TEXT    NOT NULL DEFAULT 'open',
+  invited    INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+-- анкеты волонтёров: pending — ждёт решения, approved — участвует, rejected — не в этот раз, withdrawn — передумал
+CREATE TABLE IF NOT EXISTS campaign_apps (
+  campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  about       TEXT    NOT NULL DEFAULT '',
+  status      TEXT    NOT NULL DEFAULT 'pending',
+  ts          INTEGER NOT NULL,
+  PRIMARY KEY (campaign_id, user_id)
+);
 CREATE TABLE IF NOT EXISTS shorts (
   id         INTEGER PRIMARY KEY,
   title      TEXT    NOT NULL,
@@ -244,6 +284,10 @@ await addCol('rewards', 'icon', `TEXT NOT NULL DEFAULT 'gift'`);
 await addCol('reward_codes', 'status', `TEXT NOT NULL DEFAULT 'done'`); // pending — ждёт выдачи координатором
 await addCol('reward_codes', 'note', `TEXT NOT NULL DEFAULT ''`);
 await addCol('reward_codes', 'done_at', 'INTEGER');
+// уведомление может вести на страницу сайта (кнопка в Telegram), например на анкету набора волонтёров
+await addCol('notifications', 'link', 'TEXT');
+await addCol('company_requests', 'regular', 'INTEGER NOT NULL DEFAULT 0'); // 1 — компания хочет работать регулярно
+await db.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
 // Один номер — по аккаунту в каждой роли: у аккаунтов сайта к ключу номера добавляется роль (998901234567:helper).
 // Это обычный UPDATE, без пересоздания таблицы, — работает и в облачной базе. Администраторы остаются с цифрами номера.
 {

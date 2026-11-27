@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { L, loadLearn, doneCount, totalPoints, levelOf, isDone, streak, learnedToday, achievements } from '../../learn.js';
 import { SKILLS, COINS } from '@shared/constants.js';
 import Icon from '../../components/Icon.vue';
+import CampaignsBlock from '../../components/CampaignsBlock.vue';
 import { PageHead, Tile, Empty } from '../../components/ui.js';
 
 onMounted(() => loadLearn().catch((e) => toast(e.message, true)));
@@ -46,6 +47,7 @@ async function apply() {
     <Tile color="green" icon="check" label="Пройдено курсов" :value="S.me.coursesDone" :sub="`из ${L.courses.length || '—'}`" />
     <Tile color="purple" icon="trophy" label="Уровень" :value="level.name" :sub="`${points} баллов`" />
   </div>
+  <CampaignsBlock style="margin-top:16px" />
 
   <div class="grid2">
     <div class="card">

@@ -1,11 +1,13 @@
+import companies from './companies.js';
 import { COINS } from '@shared/constants.js';
 
 export default {
+  comp: companies.en,
   common: {
     tagline: 'Helping together',
     city: 'Tashkent',
     navAria: 'Site sections',
-    nav: { how: 'How it works', categories: 'Categories', volunteers: 'For volunteers' },
+    nav: { how: 'How it works', categories: 'Categories', volunteers: 'For volunteers', companies: 'For companies' },
     login: 'Log in',
     register: 'Sign up',
     cabinet: 'My account',
@@ -58,7 +60,7 @@ export default {
     joinMore: 'More for volunteers',
     joinNote: 'You can use Google — it takes a minute.',
     guideLink: 'More about volunteering in Tashkent: how to start and what volunteers do',
-    footer: { categories: 'Help categories', volunteers: 'For volunteers', students: 'For students', login: 'Log in', guide: 'Volunteering in Tashkent' },
+    footer: { companies: 'For companies', categories: 'Help categories', volunteers: 'For volunteers', students: 'For students', login: 'Log in', guide: 'Volunteering in Tashkent' },
   },
   roles: {
     help: {

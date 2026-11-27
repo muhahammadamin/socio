@@ -1,12 +1,14 @@
+import companies from './companies.js';
 import { COINS } from '@shared/constants.js';
 
 // Oʻzbek tili (lotin yozuvi). Sonlardan keyin otlar birlikda keladi, shuning uchun koʻplik shakllari bitta.
 export default {
+  comp: companies.uz,
   common: {
     tagline: 'Birgalikda yordam beramiz',
     city: 'Toshkent',
     navAria: 'Sayt boʻlimlari',
-    nav: { how: 'Qanday ishlaydi', categories: 'Yoʻnalishlar', volunteers: 'Volontyorlarga' },
+    nav: { how: 'Qanday ishlaydi', categories: 'Yoʻnalishlar', volunteers: 'Volontyorlarga', companies: 'Kompaniyalarga' },
     login: 'Kirish',
     register: 'Roʻyxatdan oʻtish',
     cabinet: 'Shaxsiy kabinet',
@@ -59,7 +61,7 @@ export default {
     joinMore: 'Volontyorlar uchun batafsil',
     joinNote: 'Google orqali ham mumkin — bir daqiqa vaqt oladi.',
     guideLink: 'Toshkentda volontyorlik haqida batafsil: qanday boshlash va nimada yordam berish',
-    footer: { categories: 'Yordam yoʻnalishlari', volunteers: 'Volontyorlarga', students: 'Talabalarga', login: 'Kirish', guide: 'Toshkentda volontyorlik' },
+    footer: { companies: 'Kompaniyalarga', categories: 'Yordam yoʻnalishlari', volunteers: 'Volontyorlarga', students: 'Talabalarga', login: 'Kirish', guide: 'Toshkentda volontyorlik' },
   },
   roles: {
     help: {

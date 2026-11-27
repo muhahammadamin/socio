@@ -29,11 +29,12 @@ export function changedAll() {
   for (const res of publicClients) send(res);
 }
 
-export async function notify(userId, text, reqId = null) {
+/** link — страница сайта, куда ведёт уведомление (кнопка в Telegram), например /helper#campaign-3. */
+export async function notify(userId, text, reqId = null, link = null) {
   if (!userId) return;
-  const r = await run('INSERT INTO notifications (user_id,text,req_id,ts) VALUES (?,?,?,?)', userId, text, reqId, Date.now());
+  const r = await run('INSERT INTO notifications (user_id,text,req_id,link,ts) VALUES (?,?,?,?,?)', userId, text, reqId, link, Date.now());
   tgNotify(r.lastInsertRowid); // копия в Telegram, если человек подключил бота
 }
-export async function notifyAdmins(text, reqId = null) {
-  for (const { id } of await all(`SELECT id FROM users WHERE role='admin'`)) await notify(id, text, reqId);
+export async function notifyAdmins(text, reqId = null, link = null) {
+  for (const { id } of await all(`SELECT id FROM users WHERE role='admin'`)) await notify(id, text, reqId, link);
 }

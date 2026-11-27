@@ -81,7 +81,7 @@ aside{background:var(--side);color:var(--side-ink);display:flex;flex-direction:c
 .btn.lg{padding:14px 24px;font-size:15.5px;border-radius:12px}
 .btn.sm{padding:6px 12px;font-size:12.5px;border-radius:8px}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
-select,input[type=text],input[type=tel],input[type=password],textarea{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;width:100%;outline:none}
+select,input[type=text],input[type=tel],input[type=password],input[type=email],input[type=number],textarea{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;width:100%;outline:none}
 select:focus,input:focus,textarea:focus{border-color:var(--accent)}
 textarea{resize:vertical;min-height:96px}
 label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px}
@@ -117,7 +117,7 @@ button.row:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
 .cico{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:15px;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);flex:none}
 .pill{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:3px 11px;font-size:12px;font-weight:700;white-space:nowrap;--x:var(--s-gray);color:var(--x);background:color-mix(in srgb,var(--x) 14%,transparent)}
 .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--x)}
-.pill.orange{--x:var(--s-orange)}.pill.teal{--x:var(--s-teal)}.pill.purple{--x:var(--s-purple)}.pill.blue{--x:var(--s-blue)}.pill.green{--x:var(--s-green)}
+.pill.orange{--x:var(--s-orange)}.pill.teal{--x:var(--s-teal)}.pill.purple{--x:var(--s-purple)}.pill.blue{--x:var(--s-blue)}.pill.green{--x:var(--s-green)}.pill.gray{--x:var(--s-gray)}
 
 .map{display:block;width:100%;height:auto;border-radius:12px;background:var(--m-bg)}
 .map .mcity{font-size:13px;font-weight:800;fill:var(--m-label);text-anchor:middle}
@@ -856,3 +856,11 @@ input,select,textarea{transition:border-color .15s,box-shadow .15s}
 .faq details[open] p{animation:riseIn .3s ease-out}
 .offer{animation:popIn .45s cubic-bezier(.2,.9,.3,1.2) backwards}
 @media (prefers-reduced-motion:reduce){.scrollbar-top{display:none}}
+
+/* главная: блок «Компаниям нужны волонтёры?» */
+.compband{margin-top:72px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:22px;align-items:center;border-radius:24px;padding:28px 32px;background:color-mix(in srgb,#1fa85c 9%,var(--surface));border:1.5px solid color-mix(in srgb,#1fa85c 30%,transparent)}
+.compband .ti{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#1fa85c,#0f766e)}
+.compband h2{font-size:clamp(22px,2.6vw,28px);font-weight:800;letter-spacing:-.5px;margin:0 0 4px}
+.compband p{color:var(--muted);max-width:560px}
+.compband .acts{display:flex;gap:10px;flex-wrap:wrap}
+@media (max-width:860px){.compband{grid-template-columns:1fr;padding:24px}}

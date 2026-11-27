@@ -18,7 +18,8 @@ watch(code, async (v) => {
   try { c.value = await api.get(`/certificates/${encodeURIComponent(v)}`); } catch (e) { err.value = e.message; }
 }, { immediate: true });
 const mine = computed(() => S.me && c.value && S.me.name === c.value.name);
-const url = computed(() => location.origin + route.fullPath);
+// адрес для проверки — официальный адрес сайта из настроек, а не тот, с которого случайно открыли страницу
+const url = computed(() => (c.value?.org?.site || location.origin) + `/certificate/${encodeURIComponent(c.value?.code || code.value)}`);
 const print = () => window.print();
 const check = () => { const v = number.value.trim().toUpperCase(); if (v) router.push(`/certificate/${encodeURIComponent(v)}`); };
 async function share() {
@@ -34,7 +35,7 @@ async function share() {
     <SiteBar class="noprint" />
     <main class="wrap" style="padding:28px 0 56px">
       <div v-if="c" class="cert card">
-        <div class="cert-top"><span class="cert-logo"><Logo /></span><div><b>Socio</b><small>Платформа взаимопомощи · Ташкент</small></div><span class="cert-no">№ {{ c.code }}</span></div>
+        <div class="cert-top"><span class="cert-logo"><Logo /></span><div><b>{{ c.org?.name || 'Socio' }}</b><small>Платформа взаимопомощи · {{ c.org?.address || 'Ташкент' }}</small><small v-if="c.org?.phone">{{ c.org.phone }}</small></div><span class="cert-no">№ {{ c.code }}</span></div>
         <p class="cert-k">Сертификат</p>
         <h1>{{ c.name }}</h1>
         <p class="cert-role">{{ c.roleTitle }}<template v-if="c.dist"> · {{ c.dist }}</template></p>
@@ -49,7 +50,7 @@ async function share() {
           <span>Участник с {{ fdate(c.since) }}<br>Выдан {{ fdate(c.ts) }}</span>
           <span class="cert-seal"><Icon name="shield" :size="22" />Проверено Socio</span>
         </div>
-        <p class="note cert-verify">Подлинность: откройте {{ url }} — данные загружаются с сервера Socio и не редактируются вручную.</p>
+        <p class="note cert-verify">Подлинность: откройте <a :href="url">{{ url }}</a> или введите номер {{ c.code }} на странице {{ url.replace(/\/[^/]*$/, '') }} — данные загружаются с сервера Socio и не редактируются вручную.</p>
         <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
           <button class="btn" type="button" @click="print"><Icon name="book" :size="16" />Распечатать или сохранить PDF</button>
           <button class="btn ghost" type="button" @click="share"><Icon name="copy" :size="16" />Поделиться ссылкой</button>

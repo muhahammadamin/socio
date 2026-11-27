@@ -144,6 +144,15 @@ const stats = computed(() => {
         </div>
       </section>
 
+      <section class="compband" id="companies">
+        <span class="ti"><Icon name="users" :size="26" /></span>
+        <div><h2>{{ t('comp.landTitle') }}</h2><p>{{ t('comp.landText') }}</p></div>
+        <div class="acts">
+          <RouterLink class="btn lg" to="/companies#request"><Icon name="send" :size="18" />{{ t('comp.landBtn') }}</RouterLink>
+          <RouterLink class="btn ghost lg" to="/companies">{{ t('comp.landMore') }}</RouterLink>
+        </div>
+      </section>
+
       <section class="cta" id="join">
         <div>
           <h2>{{ t('landing.joinTitle') }}</h2>
@@ -164,6 +173,7 @@ const stats = computed(() => {
         <span class="spacer" />
         <RouterLink to="/categories">{{ t('landing.footer.categories') }}</RouterLink>
         <RouterLink to="/volunteers">{{ t('landing.footer.volunteers') }}</RouterLink>
+        <RouterLink to="/companies">{{ t('landing.footer.companies') }}</RouterLink>
         <RouterLink to="/volunteering">{{ t('landing.footer.guide') }}</RouterLink>
         <RouterLink to="/academy">{{ t('landing.footer.students') }}</RouterLink>
         <RouterLink to="/login">{{ t('landing.footer.login') }}</RouterLink>

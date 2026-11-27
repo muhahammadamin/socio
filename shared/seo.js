@@ -8,6 +8,7 @@ export const PAGE_META = {
   '/volunteers': { priority: '0.9', changefreq: 'weekly' },
   '/volunteering': { priority: '0.9', changefreq: 'monthly' },
   '/categories': { priority: '0.8', changefreq: 'weekly' },
+  '/companies': { priority: '0.8', changefreq: 'monthly' },
   '/register': { priority: '0.7', changefreq: 'monthly' },
   '/register/volunteer': { priority: '0.8', changefreq: 'monthly' },
   '/register/help': { priority: '0.8', changefreq: 'monthly' },
@@ -24,6 +25,8 @@ export const SEO = {
       'Что такое волонтёрство и как стать волонтёром в Ташкенте: регистрация за минуту, помощь пожилым и семьям рядом с домом, обучение для студентов, ответы на частые вопросы.'],
     '/categories': ['Направления волонтёрской помощи в Ташкенте | Socio',
       'С чем помогают волонтёры Socio: покупка продуктов и лекарств, сопровождение пожилых людей, помощь семьям с детьми, бытовые дела. Выберите направление и оставьте заявку.'],
+    '/companies': ['Волонтёры для компаний и мероприятий в Ташкенте | Socio',
+      'Нужны волонтёры для субботника, благотворительной акции или мероприятия? Socio соберёт команду проверенных волонтёров из нужного района Ташкента. Для социальных проектов — бесплатно.'],
     '/register': ['Регистрация на платформе волонтёрства | Socio',
       'Зарегистрируйтесь в Socio: как волонтёр, как человек, которому нужна помощь, или как студент Академии волонтёров в Ташкенте.'],
     '/register/volunteer': ['Регистрация волонтёра в Ташкенте | Socio',
@@ -42,6 +45,8 @@ export const SEO = {
       'Volontyorlik nima va Toshkentda qanday qilib volontyor boʻlish mumkin: bir daqiqada roʻyxatdan oʻtish, uy yonida keksalar va oilalarga yordam, talabalar uchun taʼlim, koʻp beriladigan savollar.'],
     '/categories': ['Toshkentda koʻngillilar yordami yoʻnalishlari | Socio',
       'Socio koʻngillilari nimada yordam beradi: oziq-ovqat va dori xarid qilish, keksalarga hamrohlik, bolali oilalarga yordam, maishiy ishlar. Yoʻnalishni tanlang va ariza qoldiring.'],
+    '/companies': ['Toshkentda kompaniyalar va tadbirlar uchun volontyorlar | Socio',
+      'Shanbalik, xayriya aksiyasi yoki tadbir uchun volontyorlar kerakmi? Socio Toshkentning kerakli tumanidan tekshirilgan volontyorlar jamoasini yigʻadi. Ijtimoiy loyihalar uchun — bepul.'],
     '/register': ['Volontyorlik platformasida roʻyxatdan oʻtish | Socio',
       'Socioda roʻyxatdan oʻting: volontyor, yordamga muhtoj inson yoki Toshkentdagi Volontyorlar akademiyasi talabasi sifatida.'],
     '/register/volunteer': ['Toshkentda volontyor sifatida roʻyxatdan oʻtish | Socio',
@@ -60,6 +65,8 @@ export const SEO = {
       'What volunteering is and how to become a volunteer in Tashkent: sign up in a minute, help elderly people and families near your home, free training for students and answers to common questions.'],
     '/categories': ['Ways volunteers help in Tashkent | Socio',
       'What Socio volunteers help with: buying groceries and medicine, accompanying elderly people, supporting families with children and household tasks. Pick a category and submit a request.'],
+    '/companies': ['Volunteers for companies and events in Tashkent | Socio',
+      'Need volunteers for a clean-up, charity drive or event? Socio gathers a team of vetted volunteers from the right district of Tashkent. Free for social projects.'],
     '/register': ['Sign up for the volunteering platform | Socio',
       'Join Socio as a volunteer, as someone who needs help, or as a student of the Volunteer Academy in Tashkent.'],
     '/register/volunteer': ['Volunteer sign-up in Tashkent | Socio',
@@ -101,9 +108,9 @@ export const KEYWORDS = {
 
 // Ссылки в HTML-версии страниц (видны поисковикам до загрузки JavaScript)
 export const SEO_NAV = {
-  ru: [['/volunteering', 'Волонтёрство в Ташкенте'], ['/volunteers', 'Стать волонтёром'], ['/register/help', 'Получить помощь'], ['/categories', 'Направления помощи'], ['/register/student', 'Академия волонтёров для студентов']],
-  uz: [['/volunteering', 'Toshkentda volontyorlik'], ['/volunteers', 'Volontyor boʻlish'], ['/register/help', 'Yordam olish'], ['/categories', 'Yordam yoʻnalishlari'], ['/register/student', 'Talabalar uchun volontyorlar akademiyasi']],
-  en: [['/volunteering', 'Volunteering in Tashkent'], ['/volunteers', 'Become a volunteer'], ['/register/help', 'Get help'], ['/categories', 'Ways we help'], ['/register/student', 'Volunteer Academy for students']],
+  ru: [['/volunteering', 'Волонтёрство в Ташкенте'], ['/volunteers', 'Стать волонтёром'], ['/register/help', 'Получить помощь'], ['/categories', 'Направления помощи'], ['/companies', 'Волонтёры для компаний'], ['/register/student', 'Академия волонтёров для студентов']],
+  uz: [['/volunteering', 'Toshkentda volontyorlik'], ['/volunteers', 'Volontyor boʻlish'], ['/register/help', 'Yordam olish'], ['/categories', 'Yordam yoʻnalishlari'], ['/companies', 'Kompaniyalar uchun volontyorlar'], ['/register/student', 'Talabalar uchun volontyorlar akademiyasi']],
+  en: [['/volunteering', 'Volunteering in Tashkent'], ['/volunteers', 'Become a volunteer'], ['/register/help', 'Get help'], ['/categories', 'Ways we help'], ['/companies', 'Volunteers for companies'], ['/register/student', 'Volunteer Academy for students']],
 };
 
 /** Заголовок и описание страницы на языке lang (или undefined, если страница не публичная). */

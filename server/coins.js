@@ -68,6 +68,32 @@ async function certSnapshot(u) {
 }
 const parse = (s) => { try { return JSON.parse(s || '{}'); } catch { return {}; } };
 
+/* Данные организации на сертификате: настоящий адрес офиса, контакты и адрес сайта для проверки.
+   Хранятся в таблице settings (ключ org), меняются в панели: «Награды» → «Данные на сертификате». */
+const ORG_DEFAULT = { name: 'Socio', address: '', phone: '', site: '' };
+async function getOrg() {
+  const r = await one(`SELECT value FROM settings WHERE key='org'`);
+  return { ...ORG_DEFAULT, ...parse(r?.value) };
+}
+/** Адрес сайта для проверки: из настроек, иначе SITE_URL. Пусто — страница возьмёт адрес, с которого её открыли. */
+const orgSite = (o) => (o.site || process.env.SITE_URL || '').replace(/\/+$/, '');
+
+export function orgRoutes(api, { wrap, Bad }) {
+  api.get('/admin/org', allow('admin'), wrap(async () => ({ ...(await getOrg()), envSite: process.env.SITE_URL || '' })));
+  api.put('/admin/org', allow('admin'), wrap(async (req) => {
+    const b = req.body || {}, cur = await getOrg();
+    const text = (v, max, old) => (v === undefined ? old : String(v).trim().slice(0, max));
+    let site = text(b.site, 200, cur.site);
+    if (site) {
+      if (!/^https?:\/\//i.test(site)) site = `https://${site}`;
+      try { const u = new URL(site); site = u.origin; } catch { throw new Bad('Адрес сайта выглядит неверно. Пример: https://socio.uz'); }
+    }
+    const org = { name: text(b.name, 80, cur.name) || 'Socio', address: text(b.address, 200, cur.address), phone: text(b.phone, 40, cur.phone), site };
+    await run(`INSERT INTO settings (key,value) VALUES ('org',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, JSON.stringify(org));
+    return { ...org, envSite: process.env.SITE_URL || '' };
+  }));
+}
+
 /** Проверка сертификата по номеру — открыта всем (работодатель, вуз). */
 export function publicRewardRoutes(api, { wrap, Bad }) {
   api.get('/certificates/:code', wrap(async (req) => {
@@ -75,7 +101,9 @@ export function publicRewardRoutes(api, { wrap, Bad }) {
       WHERE r.kind='cert' AND c.code=? AND c.issued_at IS NOT NULL`, String(req.params.code).trim().toUpperCase().slice(0, 40));
     if (!c) throw new Bad('Сертификат с таким номером не найден.', 404);
     const d = parse(c.note);
-    return { code: c.code, ts: c.issued_at, ...d, roleTitle: ROLE_T[d.role] || 'Участник Socio' };
+    const org = await getOrg();
+    return { code: c.code, ts: c.issued_at, ...d, roleTitle: ROLE_T[d.role] || 'Участник Socio',
+      org: { name: org.name, address: org.address, phone: org.phone, site: orgSite(org) } };
   }));
 }
 

@@ -18,6 +18,7 @@ const me = computed(() => siteUser()); // администратор на сай
         <RouterLink to="/#how">{{ t('common.nav.how') }}</RouterLink>
         <RouterLink to="/categories">{{ t('common.nav.categories') }}</RouterLink>
         <RouterLink to="/volunteers">{{ t('common.nav.volunteers') }}</RouterLink>
+        <RouterLink to="/companies">{{ t('common.nav.companies') }}</RouterLink>
       </nav>
       <div class="act">
         <LangSwitch />

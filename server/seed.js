@@ -29,7 +29,7 @@ export async function deleteUser(id) {
   await run('UPDATE complaints SET from_id=NULL WHERE from_id=?', id);
   await run('UPDATE complaints SET against_id=NULL WHERE against_id=?', id);
   await run('UPDATE reward_codes SET user_id=NULL WHERE user_id=?', id);
-  for (const t of ['notifications', 'learn_progress', 'coin_log']) await run(`DELETE FROM ${t} WHERE user_id=?`, id);
+  for (const t of ['notifications', 'learn_progress', 'coin_log', 'campaign_apps']) await run(`DELETE FROM ${t} WHERE user_id=?`, id);
   await run('DELETE FROM users WHERE id=?', id);
 }
 
@@ -123,7 +123,7 @@ export async function seedDemo() {
   const now = Date.now();
   const demoHash = hashPassword(DEMO_PASSWORD);
   await tx(async () => {
-    for (const t of ['notifications', 'complaints', 'request_offers', 'request_log', 'requests', 'volunteers', 'categories', 'coin_log', 'learn_progress']) await run(`DELETE FROM ${t}`);
+    for (const t of ['notifications', 'complaints', 'request_offers', 'request_log', 'requests', 'volunteers', 'categories', 'coin_log', 'learn_progress', 'campaign_apps', 'campaigns', 'company_requests']) await run(`DELETE FROM ${t}`);
     await run(`DELETE FROM reward_codes WHERE reward_id IN (SELECT id FROM rewards WHERE kind!='code')`); // выданные сертификаты и заказы
     await run('UPDATE reward_codes SET user_id=NULL, issued_at=NULL');
     await run('DELETE FROM users');

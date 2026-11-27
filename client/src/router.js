@@ -21,6 +21,8 @@ const routes = [
   { path: '/volunteering', component: () => import('./views/Guide.vue'), meta: { title: 'Волонтёрство в Ташкенте' } },
   // сертификат волонтёра: открыт всем, чтобы работодатель или вуз мог проверить его по номеру
   { path: '/certificate/:code?', component: () => import('./views/Certificate.vue'), meta: { title: 'Сертификат волонтёра' } },
+  // компании оставляют заявку на волонтёров
+  { path: '/companies', component: () => import('./views/Companies.vue'), meta: { title: 'Компаниям' } },
   { path: '/categories', component: () => import('./views/CategoriesInfo.vue'), meta: { title: 'Направления помощи' } },
   // отдельная страница волонтёров: регистрация сразу в платформу
   { path: '/volunteers', component: () => import('./views/VolunteerPortal.vue'), meta: { title: 'Волонтёрам' } },
@@ -42,6 +44,7 @@ const routes = [
       { path: 'people', component: () => import('./views/admin/People.vue'), meta: { title: 'Все участники' } },
       { path: 'requests', component: () => import('./views/admin/Requests.vue'), meta: { title: 'Все заявки' } },
       { path: 'volunteers', component: () => import('./views/admin/Volunteers.vue'), meta: { title: 'Волонтёры' } },
+      { path: 'companies', component: () => import('./views/admin/Companies.vue'), meta: { title: 'Компании' } },
       { path: 'helpers', component: () => import('./views/admin/Helpers.vue'), meta: { title: 'Помощники' } },
       { path: 'students', component: () => import('./views/admin/Students.vue'), meta: { title: 'Студенты' } },
       { path: 'users', component: () => import('./views/admin/Users.vue'), meta: { title: 'Пользователи' } },

@@ -6,7 +6,8 @@ import { subscribe, changed, changedAll, notify, notifyAdmins } from './events.j
 import { seedDemo, isDemo, DEMO_PASSWORD, DEFAULT_ADMIN_PHONE, deleteUser } from './seed.js';
 import { classifySource, ownHosts } from './source.js';
 import { publicLearnRoutes, adminLearnRoutes } from './learn.js';
-import { addCoins, rewardRoutes, publicRewardRoutes } from './coins.js';
+import { addCoins, rewardRoutes, publicRewardRoutes, orgRoutes } from './coins.js';
+import { publicCompanyRoutes, companyRoutes, campaignsFor } from './companies.js';
 import { dispatch, offerToHelper, withdrawHelper, closeOffers, offeredTo } from './dispatch.js';
 import { telegramRoutes, telegramAdminRoutes, tgBotName, tgLinked } from './telegram.js';
 import { DISTRICTS, DISTRICT_NAMES, HELPER_TRANSITIONS, ICONS, CAT_COLORS, MAP_W, MAP_H, SKILL_KEYS, COINS, DISPATCH, DECLINE_REASONS, nearestDistrict, phoneKey, accountKey, formatPhone, isValidPhone } from '../shared/constants.js';
@@ -146,6 +147,7 @@ api.get('/public', wrap(async () => {
       visitors: await visitorCount(),
       open: (await one(`SELECT COUNT(*) n FROM requests WHERE status!='done'`)).n,
       districts: DISTRICT_NAMES.length,
+      projects: (await one('SELECT COUNT(*) n FROM campaigns')).n, // наборы волонтёров для компаний
     },
     // открытые заявки без личных данных: только категория, район и точка на карте
     pins: await all(`SELECT r.id, r.x, r.y, r.status, r.dist, c.name cat FROM requests r JOIN categories c ON c.id=r.cat_id WHERE r.status!='done'`),
@@ -205,6 +207,7 @@ api.get('/events', async (req, res) => subscribe(req, res, await readToken(req.q
 
 publicLearnRoutes(api, { Bad, wrap, str });
 publicRewardRoutes(api, { Bad, wrap });
+publicCompanyRoutes(api, { Bad, wrap, str, phone }); // компании просят волонтёров
 
 api.post('/volunteers', wrap(async (req) => {
   const b = req.body || {};
@@ -297,6 +300,7 @@ api.get('/bootstrap', wrap(async (req) => {
   const out = {
     me: await pubUser(u), demo: isDemo(), districts: DISTRICTS, categories: await categories(), requests: await requestsFor(u),
     ...(u.role === 'helper' ? { offers: await offersFor(u) } : {}),
+    ...(['helper', 'student'].includes(u.role) ? { campaigns: await campaignsFor(u) } : {}),
     notifications: (await all('SELECT id, text, req_id reqId, ts, read FROM notifications WHERE user_id=? ORDER BY ts DESC LIMIT 100', u.id)).map((n) => ({ ...n, read: !!n.read })),
   };
   if (u.role === 'admin') {
@@ -305,6 +309,7 @@ api.get('/bootstrap', wrap(async (req) => {
     out.helpers = await Promise.all((await all(`SELECT * FROM users WHERE role='helper' ORDER BY id`)).map(withSource));
     out.users = await Promise.all((await all(`SELECT * FROM users WHERE role='user' ORDER BY id`)).map(withSource));
     out.admins = await adminList();
+    out.companiesNew = (await one(`SELECT COUNT(*) n FROM company_requests WHERE status='new'`)).n;
     out.volunteers = (await all('SELECT * FROM volunteers ORDER BY created_at DESC')).map((v) => ({ ...v, skills: parseSkills(v.skills) }));
     out.students = await Promise.all((await all(`SELECT * FROM users WHERE role='student' ORDER BY id DESC`)).map(withSource));
     out.complaints = await all(`SELECT c.id, c.text, c.status, c.created_at ts, f.name from_name, a.name against_name, c.req_id reqId
@@ -668,6 +673,10 @@ api.post('/students/:id/promote', allow('admin'), wrap(async (req) => {
 
 /* коины и награды */
 rewardRoutes(api, { Bad, wrap, str });
+orgRoutes(api, { Bad, wrap });
+
+/* компании и наборы волонтёров */
+companyRoutes(api, { Bad, wrap, str });
 
 /* учебный центр */
 adminLearnRoutes(api, { Bad, wrap, str });

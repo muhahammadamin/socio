@@ -11,7 +11,7 @@ const route = useRoute(), router = useRouter();
 const base = computed(() => HOME[S.me.role]);
 
 const NAV = {
-  admin: [['', 'Главная', 'home'], ['people', 'Все участники', 'users'], ['requests', 'Все заявки', 'list'], ['volunteers', 'Волонтёры', 'users'], ['helpers', 'Помощники', 'shield'],
+  admin: [['', 'Главная', 'home'], ['people', 'Все участники', 'users'], ['requests', 'Все заявки', 'list'], ['volunteers', 'Волонтёры', 'users'], ['companies', 'Компании', 'bag'], ['helpers', 'Помощники', 'shield'],
     ['students', 'Студенты', 'book'], ['users', 'Пользователи', 'user'], ['stats', 'Статистика', 'chart'], ['categories', 'Категории', 'grid'], ['learning', 'Обучение', 'play'],
     ['rewards', 'Награды', 'coin'], ['complaints', 'Жалобы', 'flag'], ['admins', 'Администраторы', 'lock'], ['telegram', 'Telegram-бот', 'send'], ['settings', 'Настройки', 'sliders']],
   helper: [['', 'Главная', 'home'], ['tasks', 'Мои заявки', 'list'], ['history', 'История', 'history'], ['stats', 'Статистика', 'chart'], ['coins', 'Коины', 'coin'], ['/academy', 'Академия', 'book'], ['notifications', 'Уведомления', 'bell'], ['profile', 'Профиль', 'user']],
@@ -24,6 +24,7 @@ const badge = (v) => {
   if (v === 'notifications') return unread();
   if (S.me.role === 'admin' && v === 'requests') return S.reqs.filter((r) => r.status === 'new').length;
   if (S.me.role === 'admin' && v === 'complaints') return S.complaints.filter((c) => c.status === 'open').length;
+  if (S.me.role === 'admin' && v === 'companies') return S.companiesNew;
   if (S.me.role === 'admin' && v === 'volunteers') return S.vols.length + S.helpers.filter((h) => !h.verified).length;
   if (S.me.role === 'helper' && v === 'tasks') return S.reqs.filter((r) => r.status === 'assigned').length;
   return 0;

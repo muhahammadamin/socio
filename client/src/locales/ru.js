@@ -1,11 +1,13 @@
+import companies from './companies.js';
 import { COINS } from '@shared/constants.js';
 
 export default {
+  comp: companies.ru,
   common: {
     tagline: 'Помогаем вместе',
     city: 'Ташкент',
     navAria: 'Разделы сайта',
-    nav: { how: 'Как это работает', categories: 'Направления', volunteers: 'Волонтёрам' },
+    nav: { how: 'Как это работает', categories: 'Направления', volunteers: 'Волонтёрам', companies: 'Компаниям' },
     login: 'Войти',
     register: 'Регистрация',
     cabinet: 'Мой кабинет',
@@ -58,7 +60,7 @@ export default {
     joinMore: 'Подробнее для волонтёров',
     joinNote: 'Можно через Google — это займёт минуту.',
     guideLink: 'Подробно о волонтёрстве в Ташкенте: как начать и с чем помогают',
-    footer: { categories: 'Направления помощи', volunteers: 'Волонтёрам', students: 'Студентам', login: 'Вход', guide: 'Волонтёрство в Ташкенте' },
+    footer: { companies: 'Компаниям', categories: 'Направления помощи', volunteers: 'Волонтёрам', students: 'Студентам', login: 'Вход', guide: 'Волонтёрство в Ташкенте' },
   },
   roles: {
     help: {
